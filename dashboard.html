@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeetingMeter — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Nav -->
+    <nav class="nav">
+      <a class="nav-brand" href="index.html"><span>&#9713;</span> MeetingMeter</a>
+      <div class="nav-actions">
+        <button class="btn btn-secondary btn-sm" onclick="clearData()">Clear Data</button>
+      </div>
+    </nav>
+
+    <!-- No data state -->
+    <div id="no-data" class="no-data" style="display:none">
+      <h2>No data found</h2>
+      <p>Go back and connect your calendar or upload an ICS file.</p>
+      <a href="index.html" class="btn btn-primary">Go to Home</a>
+    </div>
+
+    <!-- Dashboard content -->
+    <div id="dashboard" style="display:none">
+      <!-- Score Badge -->
+      <div class="card score-badge" id="score-badge">
+        <div class="score-sublabel">MeetingLoad Score&trade;</div>
+        <div class="score-number" id="score-number">—</div>
+        <div class="score-label" id="score-label">Loading…</div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-meetings-week">—</div>
+          <div class="stat-label">Meetings / Week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-hours-week">—</div>
+          <div class="stat-label">Hours / Week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-avg-duration">—</div>
+          <div class="stat-label">Avg Duration (min)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-btb">—</div>
+          <div class="stat-label">Back-to-back %</div>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="charts-grid">
+        <div class="chart-card full-width">
+          <h3>Meetings per Day (last 30 days)</h3>
+          <canvas id="chart-meetings-day"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Online vs In-person</h3>
+          <canvas id="chart-online-offline"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Duration Distribution</h3>
+          <canvas id="chart-duration"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Day of Week Pattern</h3>
+          <canvas id="chart-dow"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Meeting Size Breakdown</h3>
+          <canvas id="chart-size"></canvas>
+        </div>
+        <div class="chart-card full-width">
+          <h3>Meeting Heatmap (Day &times; Hour)</h3>
+          <div class="heatmap-container">
+            <canvas id="chart-heatmap"></canvas>
+          </div>
+        </div>
+        <div class="chart-card full-width">
+          <h3>Weekly Meeting Hours (last 12 weeks)</h3>
+          <canvas id="chart-weekly-trend"></canvas>
+        </div>
+      </div>
+
+      <!-- Top Contacts -->
+      <div class="card" style="margin: 24px 0">
+        <h3 style="margin-bottom: 16px">Top Contacts</h3>
+        <div style="overflow-x: auto">
+          <table class="contacts-table" id="contacts-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Meetings</th>
+                <th>Hours</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="contacts-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Focus Time Finder -->
+      <div class="card" style="margin: 24px 0">
+        <h3 style="margin-bottom: 16px">Focus Time Finder</h3>
+        <div id="focus-summary" style="margin-bottom: 16px; color: var(--text-muted); font-size: 0.875rem"></div>
+        <div class="focus-windows" id="focus-windows"></div>
+      </div>
+
+      <!-- Meeting Diet -->
+      <div class="card" style="margin: 24px 0">
+        <h3 style="margin-bottom: 16px">Meeting Diet</h3>
+        <div class="suggestion-cards" id="diet-suggestions"></div>
+        <div id="diet-empty" style="display:none; color: var(--text-muted); font-size: 0.875rem; padding: 12px 0">
+          Looking good! No major meeting diet suggestions right now.
+        </div>
+      </div>
+
+      <!-- Share -->
+      <div class="card share-section" style="margin: 24px 0">
+        <h3 style="margin-bottom: 16px">Share Your Score</h3>
+        <div class="share-actions">
+          <button class="btn btn-primary btn-sm" onclick="window.MeetingMeterShare.downloadCard()">Download PNG</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.MeetingMeterShare.copyCard()">Copy to Clipboard</button>
+        </div>
+        <textarea class="share-caption" id="share-caption" readonly></textarea>
+      </div>
+    </div>
+
+    <!-- Hidden score card for html2canvas -->
+    <div class="score-card-render" id="score-card-render"></div>
+
+    <footer class="footer">
+      MeetingMeter by ArsitekMembumi
+    </footer>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="js/score.js"></script>
+  <script src="js/analyzer.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/share.js"></script>
+  <script>
+    function clearData() {
+      if (confirm('Clear all calendar data from this browser?')) {
+        localStorage.removeItem('mm_events');
+        window.location.href = 'index.html';
+      }
+    }
+
+    (function init() {
+      const raw = localStorage.getItem('mm_events');
+      if (!raw) {
+        document.getElementById('no-data').style.display = 'block';
+        return;
+      }
+
+      let events;
+      try {
+        events = JSON.parse(raw);
+      } catch (_) {
+        document.getElementById('no-data').style.display = 'block';
+        return;
+      }
+
+      if (!events || events.length === 0) {
+        document.getElementById('no-data').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('dashboard').style.display = 'block';
+
+      // Score
+      const scoreData = window.MeetingMeterScore.computeScore(events);
+      document.getElementById('score-number').textContent = scoreData.score;
+      document.getElementById('score-number').style.color = scoreData.color;
+      document.getElementById('score-label').textContent = scoreData.label;
+      document.getElementById('score-label').style.color = scoreData.color;
+      document.getElementById('score-badge').style.borderLeft = `4px solid ${scoreData.color}`;
+
+      // Summary stats
+      const summary = window.MeetingMeterAnalyzer.computeSummary(events);
+      document.getElementById('stat-meetings-week').textContent = summary.meetingsPerWeek;
+      document.getElementById('stat-hours-week').textContent = summary.hoursPerWeek + 'h';
+      document.getElementById('stat-avg-duration').textContent = summary.avgDuration + 'min';
+      document.getElementById('stat-btb').textContent = summary.backToBackPct + '%';
+
+      // Charts
+      window.MeetingMeterCharts.renderMeetingsPerDay('chart-meetings-day', events);
+      window.MeetingMeterCharts.renderOnlineVsOffline('chart-online-offline', events);
+      window.MeetingMeterCharts.renderDurationDistribution('chart-duration', events);
+      window.MeetingMeterCharts.renderDayOfWeek('chart-dow', events);
+      window.MeetingMeterCharts.renderHeatmap('chart-heatmap', events);
+      window.MeetingMeterCharts.renderWeeklyTrend('chart-weekly-trend', events);
+      window.MeetingMeterCharts.renderMeetingSize('chart-size', events);
+
+      // Top contacts
+      const contacts = window.MeetingMeterAnalyzer.computeTopContacts(events);
+      const tbody = document.getElementById('contacts-body');
+      if (contacts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color: var(--text-muted); text-align: center; padding: 20px">No contact data available</td></tr>';
+      } else {
+        const maxCount = contacts[0].meetingCount;
+        tbody.innerHTML = contacts.map((c, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${escapeHtml(c.name)}</td>
+            <td>${c.meetingCount}</td>
+            <td>${c.totalHours}h</td>
+            <td style="min-width:100px"><div class="contact-bar" style="width: ${(c.meetingCount / maxCount * 100)}%"></div></td>
+          </tr>
+        `).join('');
+      }
+
+      // Focus time
+      const focus = window.MeetingMeterAnalyzer.computeFocusTime(events);
+      document.getElementById('focus-summary').innerHTML = `Average focus time: <strong>${focus.avgFocusHoursPerDay} hrs/day</strong>`;
+      const fwEl = document.getElementById('focus-windows');
+      if (focus.bestWindow) {
+        fwEl.innerHTML += `
+          <div class="focus-window">
+            <div class="fw-icon">&#127775;</div>
+            <div class="fw-text">
+              <strong>Best deep work window: ${focus.bestWindow.day} ${focus.bestWindow.start}–${focus.bestWindow.end}</strong>
+              Your most consistent free block
+            </div>
+          </div>`;
+      }
+      focus.topWindows.forEach((w, i) => {
+        fwEl.innerHTML += `
+          <div class="focus-window">
+            <div class="fw-icon">&#9201;</div>
+            <div class="fw-text">
+              <strong>${w.day} ${w.start}–${w.end}</strong>
+              ${w.hours} hours free
+            </div>
+          </div>`;
+      });
+
+      // Diet suggestions
+      const suggestions = window.MeetingMeterAnalyzer.computeDietSuggestions(events);
+      const dietEl = document.getElementById('diet-suggestions');
+      if (suggestions.length === 0) {
+        document.getElementById('diet-empty').style.display = 'block';
+      } else {
+        dietEl.innerHTML = suggestions.map(s => `
+          <div class="suggestion-card">
+            <div class="sg-icon">${s.icon}</div>
+            <div class="sg-body">
+              <div class="sg-title">${escapeHtml(s.title)}</div>
+              <div class="sg-detail">${escapeHtml(s.suggestion)}</div>
+              ${s.hoursWasted > 0 ? `<div class="sg-savings">Potential savings: ${s.hoursWasted}h/month</div>` : ''}
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Share
+      window.MeetingMeterShare.buildScoreCard(scoreData, summary);
+      document.getElementById('share-caption').value =
+        window.MeetingMeterShare.getLinkedInCaption(scoreData.score, summary.hoursPerWeek);
+    })();
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

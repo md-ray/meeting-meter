@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeetingMeter — Your calendar does not lie.</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Nav -->
+    <nav class="nav">
+      <div class="nav-brand"><span>&#9713;</span> MeetingMeter</div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <h1>Your calendar does not lie.</h1>
+      <p class="subheadline">Find out how much your meetings are actually costing you.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary btn-lg" id="btn-connect" onclick="connectCalendar()">
+          &#9741; Connect Microsoft Calendar
+        </button>
+        <div>
+          <div class="upload-zone" id="upload-zone">
+            <div class="upload-icon">&#128194;</div>
+            <strong>Upload ICS files</strong>
+            <p>Drag &amp; drop or click to browse (supports multiple files)</p>
+            <input type="file" id="ics-input" accept=".ics" multiple hidden>
+          </div>
+          <a href="#" class="upload-link" onclick="openExportGuide(event)">How to export your calendar?</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Privacy -->
+    <div class="privacy-banner">
+      <strong>&#128274; Privacy first.</strong> Your data stays in your browser. We never see it. Ever.
+    </div>
+
+    <!-- How it works -->
+    <section class="how-it-works">
+      <h2>How it works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Connect</h3>
+          <p>Sign in with Microsoft or upload your ICS calendar export.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Analyze</h3>
+          <p>We crunch 90 days of data — patterns, habits, time sinks — all in your browser.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Discover</h3>
+          <p>Get your MeetingLoad Score&trade;, focus time insights, and actionable suggestions.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      MeetingMeter by ArsitekMembumi
+    </footer>
+  </div>
+
+  <!-- Export Guide Modal (MM-11) -->
+  <div class="modal-overlay" id="export-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeExportGuide()">&times;</button>
+      <h2>How to export your calendar</h2>
+      <div class="modal-tabs" id="export-tabs">
+        <button class="modal-tab active" data-tab="google" onclick="switchTab(this)">Google Calendar</button>
+        <button class="modal-tab" data-tab="outlook-web" onclick="switchTab(this)">Outlook Web</button>
+        <button class="modal-tab" data-tab="outlook-desktop" onclick="switchTab(this)">Outlook Desktop</button>
+        <button class="modal-tab" data-tab="apple" onclick="switchTab(this)">Apple Calendar</button>
+      </div>
+      <div class="modal-content">
+        <div id="tab-google">
+          <ol>
+            <li>Open <strong>Google Calendar</strong> in your browser.</li>
+            <li>Click the <strong>gear icon</strong> (top right) → <strong>Settings</strong>.</li>
+            <li>In the left sidebar, click <strong>Import &amp; export</strong>.</li>
+            <li>Click <strong>Export</strong>. A ZIP file will download.</li>
+            <li>Extract the ZIP — you'll find one or more <strong>.ics</strong> files.</li>
+            <li>Upload those files here.</li>
+          </ol>
+        </div>
+        <div id="tab-outlook-web" style="display:none">
+          <ol>
+            <li>Go to <strong>outlook.live.com/calendar</strong> or your Outlook Web app.</li>
+            <li>Click the <strong>gear icon</strong> → <strong>View all Outlook settings</strong>.</li>
+            <li>Navigate to <strong>Calendar</strong> → <strong>Shared calendars</strong>.</li>
+            <li>Under <strong>Publish a calendar</strong>, select your calendar and choose <strong>Can view all details</strong>.</li>
+            <li>Click <strong>Publish</strong> and copy the <strong>ICS link</strong>.</li>
+            <li>Open the ICS link in your browser to download the file.</li>
+            <li>Upload the downloaded .ics file here.</li>
+          </ol>
+        </div>
+        <div id="tab-outlook-desktop" style="display:none">
+          <ol>
+            <li>Open <strong>Outlook</strong> and go to <strong>Calendar</strong> view.</li>
+            <li>Click <strong>File</strong> → <strong>Save Calendar</strong>.</li>
+            <li>Choose <strong>Date Range</strong>: select at least the last 90 days.</li>
+            <li>Set <strong>Detail</strong> to <strong>Full details</strong>.</li>
+            <li>Save as <strong>.ics</strong> file.</li>
+            <li>Upload the saved file here.</li>
+          </ol>
+        </div>
+        <div id="tab-apple" style="display:none">
+          <ol>
+            <li>Open <strong>Calendar</strong> app on your Mac.</li>
+            <li>In the sidebar, right-click the calendar you want to export.</li>
+            <li>Select <strong>Export…</strong></li>
+            <li>Choose a save location and click <strong>Export</strong>.</li>
+            <li>Upload the .ics file here.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/graph-client.js"></script>
+  <script src="js/ical-parser.js"></script>
+  <script>
+    // Connect Microsoft Calendar
+    async function connectCalendar() {
+      const btn = document.getElementById('btn-connect');
+      btn.textContent = 'Connecting…';
+      btn.disabled = true;
+      try {
+        await window.MeetingMeterAuth.login();
+        await window.MeetingMeterGraph.fetchAndStore();
+      } catch (err) {
+        console.error(err);
+        alert('Connection failed. Please try again.');
+        btn.textContent = '⎽ Connect Microsoft Calendar';
+        btn.disabled = false;
+      }
+    }
+
+    // ICS upload
+    const uploadZone = document.getElementById('upload-zone');
+    const icsInput = document.getElementById('ics-input');
+
+    uploadZone.addEventListener('click', () => icsInput.click());
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        window.MeetingMeterICS.parseAndStore(e.dataTransfer.files);
+      }
+    });
+    icsInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        window.MeetingMeterICS.parseAndStore(e.target.files);
+      }
+    });
+
+    // Export guide modal
+    function openExportGuide(e) {
+      e.preventDefault();
+      document.getElementById('export-modal').classList.add('active');
+    }
+    function closeExportGuide() {
+      document.getElementById('export-modal').classList.remove('active');
+    }
+    document.getElementById('export-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeExportGuide();
+    });
+
+    function switchTab(btn) {
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      const tabs = ['google', 'outlook-web', 'outlook-desktop', 'apple'];
+      tabs.forEach(t => {
+        document.getElementById('tab-' + t).style.display = t === btn.dataset.tab ? 'block' : 'none';
+      });
+    }
+
+    // Check if already logged in → try silent token
+    (async function () {
+      try {
+        window.MeetingMeterAuth.ensureMsal();
+        if (window.MeetingMeterAuth.isLoggedIn()) {
+          // Already logged in, could auto-fetch
+        }
+      } catch (_) {}
+    })();
+  </script>
+</body>
+</html>
