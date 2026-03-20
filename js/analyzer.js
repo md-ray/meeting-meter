@@ -41,10 +41,11 @@
     const WORK_START = 8;
     const WORK_END = 19;
 
-    // Group by date
+    // Group by LOCAL date (not UTC) to match local day-of-week
     const byDate = {};
     recent.forEach(e => {
-      const day = e.start.slice(0, 10);
+      const dt = new Date(e.start);
+      const day = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
       if (!byDate[day]) byDate[day] = [];
       byDate[day].push(e);
     });
@@ -60,7 +61,9 @@
     for (let d = new Date(thirtyAgo); d <= now; d.setDate(d.getDate() + 1)) {
       const dow = d.getDay();
       if (dow === 0 || dow === 6) continue;
-      const dateStr = d.toISOString().slice(0, 10);
+      // Use local date string to avoid UTC timezone mismatch
+      const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const dayName = DAY_NAMES[dow];
       const dayEvents = (byDate[dateStr] || [])
         .map(e => ({
           start: Math.max(WORK_START, new Date(e.start).getHours() + new Date(e.start).getMinutes() / 60),
@@ -78,7 +81,7 @@
         if (e.start > cursor) {
           const gap = e.start - cursor;
           focusHours += gap;
-          blocks.push({ day: DAY_NAMES[new Date(dateStr + 'T12:00:00').getDay()], date: dateStr, start: cursor, end: e.start, hours: gap });
+          blocks.push({ day: dayName, date: dateStr, start: cursor, end: e.start, hours: gap });
         }
         cursor = Math.max(cursor, e.end);
       });
@@ -86,7 +89,7 @@
       if (cursor < WORK_END) {
         const gap = WORK_END - cursor;
         focusHours += gap;
-        blocks.push({ day: DAY_NAMES[new Date(dateStr + 'T12:00:00').getDay()], date: dateStr, start: cursor, end: WORK_END, hours: gap });
+        blocks.push({ day: dayName, date: dateStr, start: cursor, end: WORK_END, hours: gap });
       }
 
       dailyFocus.push(focusHours);
