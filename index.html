@@ -122,14 +122,39 @@
     </div>
   </div>
 
+  <!-- Device Code Modal -->
+  <div class="modal-overlay" id="device-code-modal">
+    <div class="modal" style="max-width: 440px; text-align: center">
+      <button class="modal-close" onclick="closeDeviceCode()">&times;</button>
+      <h2 style="margin-bottom: 8px">Connect Microsoft Calendar</h2>
+      <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 20px">Sign in with your Microsoft account to import 90 days of calendar data.</p>
+      <div id="dc-loading" style="display:none; padding: 20px">
+        <p style="color: var(--text-muted)">Getting device code…</p>
+      </div>
+      <div id="dc-code" style="display:none">
+        <p style="margin-bottom: 12px">Open this URL and enter the code:</p>
+        <a id="dc-url" href="https://microsoft.com/devicelogin" target="_blank" class="btn btn-primary btn-sm" style="margin-bottom: 16px">https://microsoft.com/devicelogin</a>
+        <div style="font-size: 2rem; font-family: monospace; font-weight: 700; letter-spacing: 0.15em; background: var(--card); padding: 16px; border-radius: 8px; margin: 12px 0; user-select: all" id="dc-user-code">—</div>
+        <button class="btn btn-secondary btn-sm" onclick="copyCode()" id="dc-copy-btn">Copy Code</button>
+        <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 16px" id="dc-status">Waiting for you to sign in…</p>
+      </div>
+      <div id="dc-success" style="display:none; padding: 20px">
+        <p style="color: var(--green); font-size: 1.125rem; font-weight: 600">✓ Connected! Fetching calendar…</p>
+      </div>
+      <div id="dc-error" style="display:none; padding: 20px">
+        <p style="color: var(--red)" id="dc-error-msg">Something went wrong.</p>
+        <button class="btn btn-primary btn-sm" onclick="connectCalendar()" style="margin-top: 12px">Try Again</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
-  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/graph-client.js"></script>
   <script src="js/ical-parser.js"></script>
   <script>
-    // Connect Microsoft Calendar — PKCE popup flow
+    // Connect Microsoft Calendar — Device Code Flow
     async function connectCalendar() {
       const btn = document.getElementById('btn-connect');
 
@@ -142,24 +167,64 @@
         } catch (err) {
           console.error(err);
           alert('Failed to fetch calendar: ' + err.message);
-          btn.textContent = '⎽ Connect Microsoft Calendar';
+          btn.textContent = '🔗 Or connect Microsoft Calendar';
           btn.disabled = false;
         }
         return;
       }
 
-      btn.textContent = 'Connecting…';
-      btn.disabled = true;
+      // Show device code modal
+      showDeviceCodeModal();
+    }
+
+    async function showDeviceCodeModal() {
+      const modal = document.getElementById('device-code-modal');
+      modal.classList.add('active');
+      document.getElementById('dc-loading').style.display = 'block';
+      document.getElementById('dc-code').style.display = 'none';
+      document.getElementById('dc-success').style.display = 'none';
+      document.getElementById('dc-error').style.display = 'none';
+
       try {
-        await window.MeetingMeterAuth.login();
-        btn.textContent = 'Fetching calendar…';
+        const dcResp = await window.MeetingMeterAuth.startDeviceCodeFlow();
+        document.getElementById('dc-loading').style.display = 'none';
+        document.getElementById('dc-code').style.display = 'block';
+        document.getElementById('dc-user-code').textContent = dcResp.user_code;
+        document.getElementById('dc-url').href = dcResp.verification_uri || 'https://microsoft.com/devicelogin';
+        document.getElementById('dc-url').textContent = dcResp.verification_uri || 'https://microsoft.com/devicelogin';
+
+        // Poll for token
+        document.getElementById('dc-status').textContent = 'Waiting for you to sign in…';
+        const tokenData = await window.MeetingMeterAuth.pollForToken(
+          dcResp.device_code,
+          dcResp.interval || 5,
+          dcResp.expires_in || 900
+        );
+
+        // Success — fetch calendar
+        document.getElementById('dc-code').style.display = 'none';
+        document.getElementById('dc-success').style.display = 'block';
         await window.MeetingMeterGraph.fetchAndStore();
       } catch (err) {
-        console.error(err);
-        alert('Connection failed: ' + err.message);
-        btn.textContent = '⎽ Connect Microsoft Calendar';
-        btn.disabled = false;
+        console.error('Device code flow failed:', err);
+        document.getElementById('dc-loading').style.display = 'none';
+        document.getElementById('dc-code').style.display = 'none';
+        document.getElementById('dc-error').style.display = 'block';
+        document.getElementById('dc-error-msg').textContent = err.message || 'Something went wrong.';
       }
+    }
+
+    function closeDeviceCode() {
+      document.getElementById('device-code-modal').classList.remove('active');
+    }
+
+    function copyCode() {
+      const code = document.getElementById('dc-user-code').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = document.getElementById('dc-copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Code'; }, 2000);
+      });
     }
 
     // ICS upload
@@ -207,15 +272,12 @@
     }
 
     // Check if already logged in on page load
-    (async function () {
-      try {
-        window.MeetingMeterAuth.ensureMsal();
-        if (window.MeetingMeterAuth.isLoggedIn()) {
-          const btn = document.getElementById('btn-connect');
-          btn.textContent = '✓ Connected — View Dashboard';
-          btn.onclick = () => { window.location.href = 'dashboard.html'; };
-        }
-      } catch (_) {}
+    (function () {
+      if (window.MeetingMeterAuth.isLoggedIn()) {
+        const btn = document.getElementById('btn-connect');
+        btn.textContent = '✓ Connected — View Dashboard';
+        btn.onclick = () => { window.location.href = 'dashboard.html'; };
+      }
     })();
   </script>
 </body>
