@@ -1,65 +1,145 @@
-// MeetingMeter — MSAL PKCE Auth
+// MeetingMeter — Device Code Auth Flow
+// Same mechanism as Microsoft Graph CLI Tools — no Azure app registration needed
 (function () {
-  const msalConfig = {
-    auth: {
-      clientId: '14d82eec-204b-4c2f-b7e8-296a70dab67e',
-      authority: 'https://login.microsoftonline.com/common',
-      redirectUri: window.location.origin + '/meetingmeter/',
-    },
-    cache: {
-      cacheLocation: 'localStorage',
-      storeAuthStateInCookie: false,
-    },
-  };
+  const CLIENT_ID = '14d82eec-204b-4c2f-b7e8-296a70dab67e';
+  const AUTHORITY = 'https://login.microsoftonline.com/common/oauth2/v2.0';
+  const SCOPES = 'Calendars.Read User.Read offline_access';
+  const TOKEN_KEY = 'mm_token';
+  const POLL_INTERVAL = 3000; // poll every 3 seconds
 
-  const loginScopes = { scopes: ['Calendars.Read', 'User.Read'] };
-  let msalInstance = null;
+  // Start device code flow
+  async function startDeviceCodeFlow() {
+    const resp = await fetch(`${AUTHORITY}/devicecode`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `client_id=${CLIENT_ID}&scope=${encodeURIComponent(SCOPES)}`,
+    });
 
-  function ensureMsal() {
-    if (!msalInstance) {
-      msalInstance = new msal.PublicClientApplication(msalConfig);
+    if (!resp.ok) {
+      // If CORS blocks /devicecode, fall back to proxy-free approach
+      throw new Error(`Device code request failed: ${resp.status}`);
     }
-    return msalInstance;
+
+    return await resp.json();
+    // Returns: { device_code, user_code, verification_uri, expires_in, interval, message }
   }
 
-  async function login() {
-    const client = ensureMsal();
-    try {
-      const resp = await client.loginPopup(loginScopes);
-      if (resp && resp.account) {
-        client.setActiveAccount(resp.account);
-      }
-      return resp;
-    } catch (err) {
-      console.error('Login failed:', err);
-      throw err;
-    }
+  // Poll for token after user completes login
+  async function pollForToken(deviceCode, expiresIn) {
+    const deadline = Date.now() + expiresIn * 1000;
+
+    return new Promise((resolve, reject) => {
+      const timer = setInterval(async () => {
+        if (Date.now() > deadline) {
+          clearInterval(timer);
+          reject(new Error('Device code expired. Please try again.'));
+          return;
+        }
+
+        try {
+          const resp = await fetch(`${AUTHORITY}/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `grant_type=urn:ietf:params:oauth:grant-type:device_code&client_id=${CLIENT_ID}&device_code=${encodeURIComponent(deviceCode)}`,
+          });
+
+          const data = await resp.json();
+
+          if (data.error === 'authorization_pending') {
+            // User hasn't completed login yet — keep polling
+            return;
+          }
+
+          if (data.error === 'slow_down') {
+            // Back off (handled by interval already)
+            return;
+          }
+
+          if (data.error) {
+            clearInterval(timer);
+            reject(new Error(data.error_description || data.error));
+            return;
+          }
+
+          // Success!
+          clearInterval(timer);
+          const tokenData = {
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+            expires_at: Date.now() + data.expires_in * 1000,
+            scope: data.scope,
+          };
+          localStorage.setItem(TOKEN_KEY, JSON.stringify(tokenData));
+          resolve(tokenData);
+        } catch (err) {
+          // Network error — keep trying
+          console.warn('Poll error:', err);
+        }
+      }, POLL_INTERVAL);
+    });
   }
 
+  // Refresh token silently
+  async function refreshToken() {
+    const stored = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
+    if (!stored || !stored.refresh_token) throw new Error('No refresh token');
+
+    const resp = await fetch(`${AUTHORITY}/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=refresh_token&client_id=${CLIENT_ID}&refresh_token=${encodeURIComponent(stored.refresh_token)}&scope=${encodeURIComponent(SCOPES)}`,
+    });
+
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error_description || data.error);
+
+    const tokenData = {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token || stored.refresh_token,
+      expires_at: Date.now() + data.expires_in * 1000,
+      scope: data.scope,
+    };
+    localStorage.setItem(TOKEN_KEY, JSON.stringify(tokenData));
+    return tokenData;
+  }
+
+  // Get valid access token (auto-refresh if expired)
   async function getToken() {
-    const client = ensureMsal();
-    const account = client.getActiveAccount() || (client.getAllAccounts()[0] ?? null);
-    if (!account) throw new Error('No account found. Please log in.');
-    try {
-      const resp = await client.acquireTokenSilent({ ...loginScopes, account });
-      return resp.accessToken;
-    } catch (err) {
-      // fallback to popup
-      const resp = await client.acquireTokenPopup(loginScopes);
-      return resp.accessToken;
+    const stored = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
+    if (!stored) throw new Error('Not logged in');
+
+    // Refresh if expiring within 5 minutes
+    if (stored.expires_at - Date.now() < 5 * 60 * 1000) {
+      const refreshed = await refreshToken();
+      return refreshed.access_token;
     }
+
+    return stored.access_token;
   }
 
   function isLoggedIn() {
-    const client = ensureMsal();
-    return client.getAllAccounts().length > 0;
+    const stored = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
+    return !!(stored && stored.access_token);
   }
 
   function logout() {
-    const client = ensureMsal();
-    client.logoutPopup();
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('mm_events');
   }
 
-  // expose globally
-  window.MeetingMeterAuth = { login, logout, getToken, isLoggedIn, ensureMsal };
+  // Full login flow — returns { userCode, verificationUri, promise }
+  // Caller shows the code to user, promise resolves when auth completes
+  async function login() {
+    const deviceResp = await startDeviceCodeFlow();
+    const tokenPromise = pollForToken(deviceResp.device_code, deviceResp.expires_in);
+
+    return {
+      userCode: deviceResp.user_code,
+      verificationUri: deviceResp.verification_uri,
+      message: deviceResp.message,
+      tokenPromise: tokenPromise,
+    };
+  }
+
+  window.MeetingMeterAuth = { login, logout, getToken, isLoggedIn, refreshToken };
 })();

@@ -33,6 +33,22 @@
       </div>
     </section>
 
+    <!-- Device Code Auth Modal -->
+    <div class="device-code-overlay" id="device-code-modal">
+      <div class="device-code-card">
+        <h2>Sign in to Microsoft</h2>
+        <p>To connect your calendar:</p>
+        <ol class="device-steps">
+          <li>Open <a id="device-link" href="https://microsoft.com/devicelogin" target="_blank" rel="noopener">microsoft.com/devicelogin</a></li>
+          <li>Enter this code:</li>
+        </ol>
+        <div class="device-code-display" id="device-code-value">--------</div>
+        <button class="btn btn-secondary" onclick="copyDeviceCode()">📋 Copy Code</button>
+        <p class="device-status" id="device-status">Waiting for you to sign in…</p>
+        <button class="btn btn-ghost" onclick="cancelDeviceFlow()">Cancel</button>
+      </div>
+    </div>
+
     <!-- Privacy -->
     <div class="privacy-banner">
       <strong>&#128274; Privacy first.</strong> Your data stays in your browser. We never see it. Ever.
@@ -123,26 +139,78 @@
   </div>
 
   <!-- Scripts -->
-  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/graph-client.js"></script>
   <script src="js/ical-parser.js"></script>
   <script>
-    // Connect Microsoft Calendar
+    let activeDeviceFlow = null;
+
+    // Connect Microsoft Calendar — Device Code Flow
     async function connectCalendar() {
       const btn = document.getElementById('btn-connect');
-      btn.textContent = 'Connecting…';
+
+      // If already logged in, go straight to fetch
+      if (window.MeetingMeterAuth.isLoggedIn()) {
+        btn.textContent = 'Fetching calendar…';
+        btn.disabled = true;
+        try {
+          await window.MeetingMeterGraph.fetchAndStore();
+        } catch (err) {
+          console.error(err);
+          alert('Failed to fetch calendar: ' + err.message);
+          btn.textContent = '⎽ Connect Microsoft Calendar';
+          btn.disabled = false;
+        }
+        return;
+      }
+
+      // Start device code flow
+      btn.textContent = 'Starting…';
       btn.disabled = true;
       try {
-        await window.MeetingMeterAuth.login();
+        const flow = await window.MeetingMeterAuth.login();
+        activeDeviceFlow = flow;
+
+        // Show the device code modal
+        document.getElementById('device-code-value').textContent = flow.userCode;
+        document.getElementById('device-link').href = flow.verificationUri;
+        document.getElementById('device-status').textContent = 'Waiting for you to sign in…';
+        document.getElementById('device-code-modal').classList.add('active');
+
+        // Wait for token
+        await flow.tokenPromise;
+
+        // Success! Close modal, fetch calendar
+        document.getElementById('device-code-modal').classList.remove('active');
+        document.getElementById('device-status').textContent = 'Connected! Fetching calendar…';
+        btn.textContent = 'Fetching calendar…';
+
         await window.MeetingMeterGraph.fetchAndStore();
       } catch (err) {
         console.error(err);
-        alert('Connection failed. Please try again.');
+        document.getElementById('device-code-modal').classList.remove('active');
+        if (err.message !== 'cancelled') {
+          alert('Connection failed: ' + err.message);
+        }
         btn.textContent = '⎽ Connect Microsoft Calendar';
         btn.disabled = false;
       }
+    }
+
+    function copyDeviceCode() {
+      const code = document.getElementById('device-code-value').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = event.target;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => { btn.textContent = '📋 Copy Code'; }, 2000);
+      });
+    }
+
+    function cancelDeviceFlow() {
+      document.getElementById('device-code-modal').classList.remove('active');
+      document.getElementById('btn-connect').textContent = '⎽ Connect Microsoft Calendar';
+      document.getElementById('btn-connect').disabled = false;
     }
 
     // ICS upload
@@ -189,14 +257,13 @@
       });
     }
 
-    // Check if already logged in → try silent token
-    (async function () {
-      try {
-        window.MeetingMeterAuth.ensureMsal();
-        if (window.MeetingMeterAuth.isLoggedIn()) {
-          // Already logged in, could auto-fetch
-        }
-      } catch (_) {}
+    // Check if already logged in on page load
+    (function () {
+      if (window.MeetingMeterAuth.isLoggedIn()) {
+        const btn = document.getElementById('btn-connect');
+        btn.textContent = '✓ Connected — View Dashboard';
+        btn.onclick = () => { window.location.href = 'dashboard.html'; };
+      }
     })();
   </script>
 </body>

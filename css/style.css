@@ -578,6 +578,103 @@ a:hover { text-decoration: underline; }
   color: var(--text-muted);
 }
 
+/* Device Code Auth Modal */
+.device-code-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.device-code-overlay.active {
+  display: flex;
+}
+
+.device-code-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+}
+
+.device-code-card h2 {
+  margin-bottom: 8px;
+  font-size: 1.25rem;
+}
+
+.device-code-card p {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.device-steps {
+  text-align: left;
+  margin: 0 auto 20px;
+  max-width: 280px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.device-steps li {
+  margin-bottom: 8px;
+}
+
+.device-steps a {
+  color: var(--accent-light);
+  text-decoration: underline;
+}
+
+.device-code-display {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  font-family: 'Courier New', monospace;
+  color: var(--accent-light);
+  background: var(--bg);
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+  padding: 16px 24px;
+  margin: 16px auto;
+  display: inline-block;
+  user-select: all;
+}
+
+.device-status {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 16px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-top: 8px;
+}
+
+.btn-ghost:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
 /* No data state */
 .no-data {
   text-align: center;
