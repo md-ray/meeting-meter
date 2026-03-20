@@ -2,22 +2,24 @@
 // Same mechanism as Microsoft Graph CLI Tools — no Azure app registration needed
 (function () {
   const CLIENT_ID = '14d82eec-204b-4c2f-b7e8-296a70dab67e';
-  const AUTHORITY = 'https://login.microsoftonline.com/common/oauth2/v2.0';
   const SCOPES = 'Calendars.Read User.Read offline_access';
   const TOKEN_KEY = 'mm_token';
   const POLL_INTERVAL = 3000; // poll every 3 seconds
 
+  // Use local proxy to bypass CORS on Microsoft endpoints
+  const API_BASE = window.location.origin + '/api';
+
   // Start device code flow
   async function startDeviceCodeFlow() {
-    const resp = await fetch(`${AUTHORITY}/devicecode`, {
+    const resp = await fetch(`${API_BASE}/devicecode`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `client_id=${CLIENT_ID}&scope=${encodeURIComponent(SCOPES)}`,
     });
 
     if (!resp.ok) {
-      // If CORS blocks /devicecode, fall back to proxy-free approach
-      throw new Error(`Device code request failed: ${resp.status}`);
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error_description || `Device code request failed: ${resp.status}`);
     }
 
     return await resp.json();
@@ -37,7 +39,7 @@
         }
 
         try {
-          const resp = await fetch(`${AUTHORITY}/token`, {
+          const resp = await fetch(`${API_BASE}/token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `grant_type=urn:ietf:params:oauth:grant-type:device_code&client_id=${CLIENT_ID}&device_code=${encodeURIComponent(deviceCode)}`,
@@ -84,7 +86,7 @@
     const stored = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
     if (!stored || !stored.refresh_token) throw new Error('No refresh token');
 
-    const resp = await fetch(`${AUTHORITY}/token`, {
+    const resp = await fetch(`${API_BASE}/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `grant_type=refresh_token&client_id=${CLIENT_ID}&refresh_token=${encodeURIComponent(stored.refresh_token)}&scope=${encodeURIComponent(SCOPES)}`,
