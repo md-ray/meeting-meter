@@ -88,7 +88,13 @@
 
       <!-- Top Contacts -->
       <div class="card" style="margin: 24px 0">
-        <h3 style="margin-bottom: 16px">Top Contacts</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px">
+          <h3 style="margin: 0">Top Contacts</h3>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span id="excluded-count" style="color: var(--text-muted); font-size: 0.75rem"></span>
+            <button class="btn btn-secondary btn-sm" id="btn-reset-excluded" style="display:none; font-size: 0.75rem; padding: 4px 10px" onclick="resetExcludedContacts()">Reset Filters</button>
+          </div>
+        </div>
         <div style="overflow-x: auto">
           <table class="contacts-table" id="contacts-table">
             <thead>
@@ -97,6 +103,7 @@
                 <th>Name</th>
                 <th>Meetings</th>
                 <th>Hours</th>
+                <th></th>
                 <th></th>
               </tr>
             </thead>
@@ -151,8 +158,65 @@
     function clearData() {
       if (confirm('Clear all calendar data from this browser?')) {
         localStorage.removeItem('mm_events');
+        localStorage.removeItem('mm_excluded_contacts');
         window.location.href = 'index.html';
       }
+    }
+
+    function getExcludedContacts() {
+      try { return JSON.parse(localStorage.getItem('mm_excluded_contacts') || '[]'); }
+      catch (_) { return []; }
+    }
+
+    function excludeContact(email, name) {
+      const excluded = getExcludedContacts();
+      if (!excluded.find(e => e.email === email)) {
+        excluded.push({ email, name });
+        localStorage.setItem('mm_excluded_contacts', JSON.stringify(excluded));
+      }
+      renderContacts();
+    }
+
+    function resetExcludedContacts() {
+      localStorage.removeItem('mm_excluded_contacts');
+      renderContacts();
+    }
+
+    let _allContacts = [];
+
+    function renderContacts() {
+      const excluded = getExcludedContacts();
+      const excludedEmails = new Set(excluded.map(e => e.email));
+      const filtered = _allContacts.filter(c => !excludedEmails.has(c.email));
+
+      const tbody = document.getElementById('contacts-body');
+      const countEl = document.getElementById('excluded-count');
+      const resetBtn = document.getElementById('btn-reset-excluded');
+
+      if (excluded.length > 0) {
+        countEl.textContent = `${excluded.length} excluded`;
+        resetBtn.style.display = 'inline-block';
+      } else {
+        countEl.textContent = '';
+        resetBtn.style.display = 'none';
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="color: var(--text-muted); text-align: center; padding: 20px">No contact data available</td></tr>';
+        return;
+      }
+
+      const maxCount = filtered[0].meetingCount;
+      tbody.innerHTML = filtered.map((c, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(c.name)}</td>
+          <td>${c.meetingCount}</td>
+          <td>${c.totalHours}h</td>
+          <td style="min-width:100px"><div class="contact-bar" style="width: ${(c.meetingCount / maxCount * 100)}%"></div></td>
+          <td><button class="btn-exclude" onclick="excludeContact('${c.email.replace(/'/g, "\\'")}', '${(c.name || '').replace(/'/g, "\\'")}')" title="Exclude ${escapeHtml(c.name)}">✕</button></td>
+        </tr>
+      `).join('');
     }
 
     (function init() {
@@ -201,23 +265,9 @@
       window.MeetingMeterCharts.renderWeeklyTrend('chart-weekly-trend', events);
       window.MeetingMeterCharts.renderMeetingSize('chart-size', events);
 
-      // Top contacts
-      const contacts = window.MeetingMeterAnalyzer.computeTopContacts(events);
-      const tbody = document.getElementById('contacts-body');
-      if (contacts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="color: var(--text-muted); text-align: center; padding: 20px">No contact data available</td></tr>';
-      } else {
-        const maxCount = contacts[0].meetingCount;
-        tbody.innerHTML = contacts.map((c, i) => `
-          <tr>
-            <td>${i + 1}</td>
-            <td>${escapeHtml(c.name)}</td>
-            <td>${c.meetingCount}</td>
-            <td>${c.totalHours}h</td>
-            <td style="min-width:100px"><div class="contact-bar" style="width: ${(c.meetingCount / maxCount * 100)}%"></div></td>
-          </tr>
-        `).join('');
-      }
+      // Top contacts (with exclude filter)
+      _allContacts = window.MeetingMeterAnalyzer.computeTopContacts(events);
+      renderContacts();
 
       // Focus time
       const focus = window.MeetingMeterAnalyzer.computeFocusTime(events);

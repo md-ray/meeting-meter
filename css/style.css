@@ -355,6 +355,26 @@ a:hover { text-decoration: underline; }
   min-width: 4px;
 }
 
+.btn-exclude {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.btn-exclude:hover {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+}
+
 /* Focus time */
 .focus-windows {
   display: flex;
