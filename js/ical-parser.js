@@ -1,18 +1,24 @@
-// MeetingMeter — ICS Parser (uses ical.js)
+// MeetingMeter — ICS Parser with RRULE expansion (uses ical.js)
 (function () {
   const ONLINE_PATTERNS = /zoom\.us|teams\.microsoft|meet\.google|webex|\/j\//i;
+
+  // Default analysis window: last 90 days
+  function getDateRange() {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 90);
+    return { start, end };
+  }
 
   function parseICS(text) {
     const jcalData = ICAL.parse(text);
     const comp = new ICAL.Component(jcalData);
     const vevents = comp.getAllSubcomponents('vevent');
-    return vevents.map(ve => {
-      const event = new ICAL.Event(ve);
-      const startDt = event.startDate?.toJSDate();
-      const endDt = event.endDate?.toJSDate();
-      if (!startDt || !endDt) return null;
+    const { start: rangeStart, end: rangeEnd } = getDateRange();
+    const allEvents = [];
 
-      const durationMin = Math.round((endDt - startDt) / 60000);
+    for (const ve of vevents) {
+      const event = new ICAL.Event(ve);
       const location = ve.getFirstPropertyValue('location') || '';
       const description = ve.getFirstPropertyValue('description') || '';
       const rrule = ve.getFirstPropertyValue('rrule');
@@ -24,20 +30,81 @@
       });
       const organizer = ve.getFirstPropertyValue('organizer');
       const orgEmail = organizer ? organizer.replace(/^mailto:/i, '') : '';
+      const isOnline = ONLINE_PATTERNS.test(location) || ONLINE_PATTERNS.test(description);
+      const isRecurring = !!rrule;
+      const baseUid = event.uid || crypto.randomUUID();
 
-      return {
-        id: event.uid || crypto.randomUUID(),
-        title: event.summary || '(No title)',
-        start: startDt.toISOString(),
-        end: endDt.toISOString(),
-        duration_min: durationMin,
-        attendees,
-        isOnline: ONLINE_PATTERNS.test(location) || ONLINE_PATTERNS.test(description),
-        isRecurring: !!rrule,
-        organizer: orgEmail,
-        location,
-      };
-    }).filter(Boolean);
+      if (isRecurring && event.startDate) {
+        // Expand recurring events within the analysis window
+        try {
+          const iter = event.iterator();
+          const maxIter = 500;
+          const durationMs = event.duration ? event.duration.toSeconds() * 1000 : 
+                            (event.endDate && event.startDate ? 
+                              (event.endDate.toJSDate() - event.startDate.toJSDate()) : 3600000);
+
+          for (let i = 0; i < maxIter; i++) {
+            let next;
+            try { next = iter.next(); } catch (e) { break; }
+            if (!next) break;
+
+            const occStart = next.toJSDate();
+
+            // Skip events before our range
+            if (occStart < rangeStart) continue;
+            // Stop once we pass the end of our range
+            if (occStart > rangeEnd) break;
+
+            const occEnd = new Date(occStart.getTime() + durationMs);
+
+            allEvents.push({
+              id: baseUid + '_' + occStart.toISOString(),
+              title: event.summary || '(No title)',
+              start: occStart.toISOString(),
+              end: occEnd.toISOString(),
+              duration_min: Math.round(durationMs / 60000),
+              attendees,
+              isOnline,
+              isRecurring: true,
+              organizer: orgEmail,
+              location,
+            });
+          }
+        } catch (err) {
+          // If expansion fails, fall back to single instance
+          console.warn('RRULE expansion failed for', event.summary, err);
+          const startDt = event.startDate?.toJSDate();
+          const endDt = event.endDate?.toJSDate();
+          if (startDt && endDt) {
+            allEvents.push(makeEvent(baseUid, event, startDt, endDt, attendees, isOnline, isRecurring, orgEmail, location));
+          }
+        }
+      } else {
+        // Non-recurring event
+        const startDt = event.startDate?.toJSDate();
+        const endDt = event.endDate?.toJSDate();
+        if (startDt && endDt) {
+          allEvents.push(makeEvent(baseUid, event, startDt, endDt, attendees, isOnline, isRecurring, orgEmail, location));
+        }
+      }
+    }
+
+    return allEvents;
+  }
+
+  function makeEvent(uid, event, startDt, endDt, attendees, isOnline, isRecurring, orgEmail, location) {
+    return {
+      id: uid,
+      title: event.summary || '(No title)',
+      start: startDt.toISOString(),
+      end: endDt.toISOString(),
+      duration_min: Math.round((endDt - startDt) / 60000),
+      attendees,
+      isOnline,
+      isRecurring,
+      organizer: orgEmail,
+      location,
+    };
   }
 
   function parseMultipleFiles(fileList) {
