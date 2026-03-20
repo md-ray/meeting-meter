@@ -13,7 +13,7 @@
   }
 
   // ---- Top Contacts (MM-6) ----
-  function computeTopContacts(events, n = 15) {
+  function computeTopContacts(events) {
     const recent = getRecentEvents(events, 90);
     const contactMap = {};
 
@@ -32,7 +32,6 @@
 
     return Object.values(contactMap)
       .sort((a, b) => b.meetingCount - a.meetingCount)
-      .slice(0, n)
       .map(c => ({ ...c, totalHours: Math.round(c.totalHours * 10) / 10 }));
   }
 

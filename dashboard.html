@@ -184,10 +184,12 @@
 
     let _allContacts = [];
 
+    const CONTACTS_DISPLAY = 20;
+
     function renderContacts() {
       const excluded = getExcludedContacts();
       const excludedEmails = new Set(excluded.map(e => e.email));
-      const filtered = _allContacts.filter(c => !excludedEmails.has(c.email));
+      const filtered = _allContacts.filter(c => !excludedEmails.has(c.email)).slice(0, CONTACTS_DISPLAY);
 
       const tbody = document.getElementById('contacts-body');
       const countEl = document.getElementById('excluded-count');
@@ -271,7 +273,7 @@
 
       // Focus time
       const focus = window.MeetingMeterAnalyzer.computeFocusTime(events);
-      document.getElementById('focus-summary').innerHTML = `Average focus time: <strong>${focus.avgFocusHoursPerDay} hrs/day</strong>`;
+      document.getElementById('focus-summary').innerHTML = `Average focus time: <strong>${focus.avgFocusHoursPerDay} hrs/day</strong> <span style="color:var(--text-muted);font-size:0.75rem">(weekdays, last 30 days, 08:00–19:00)</span>`;
       const fwEl = document.getElementById('focus-windows');
       if (focus.bestWindow) {
         fwEl.innerHTML += `
