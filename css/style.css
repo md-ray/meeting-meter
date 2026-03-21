@@ -170,6 +170,56 @@ a:hover { text-decoration: underline; }
   display: inline-block;
 }
 
+/* ICS URL input */
+.ics-url-section {
+  margin-top: 16px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.ics-url-divider {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  margin-bottom: 10px;
+}
+
+.ics-url-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ics-url-input {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.ics-url-input:focus {
+  border-color: var(--accent);
+}
+
+.ics-url-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.ics-url-status {
+  font-size: 0.75rem;
+  margin-top: 6px;
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+
+.ics-url-status.error { color: var(--red); }
+.ics-url-status.success { color: var(--green); }
+
 /* Privacy banner */
 .privacy-banner {
   background: var(--card);

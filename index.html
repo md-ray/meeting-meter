@@ -27,6 +27,14 @@
           </div>
           <a href="#" class="upload-link" onclick="openExportGuide(event)">How to export your calendar?</a>
         </div>
+        <div class="ics-url-section">
+          <div class="ics-url-divider">or paste calendar link</div>
+          <div class="ics-url-input-row">
+            <input type="url" id="ics-url-input" class="ics-url-input" placeholder="https://outlook.office365.com/.../calendar.ics" autocomplete="off">
+            <button class="btn btn-primary btn-sm" id="btn-fetch-ics" onclick="fetchICSFromURL()">Import</button>
+          </div>
+          <div id="ics-url-status" class="ics-url-status"></div>
+        </div>
         <button class="btn btn-secondary btn-lg" id="btn-connect" onclick="connectCalendar()">
           &#9741; Or connect Microsoft Calendar
         </button>
@@ -226,6 +234,54 @@
         setTimeout(() => { btn.textContent = 'Copy Code'; }, 2000);
       });
     }
+
+    // ICS URL fetch
+    async function fetchICSFromURL() {
+      const input = document.getElementById('ics-url-input');
+      const btn = document.getElementById('btn-fetch-ics');
+      const status = document.getElementById('ics-url-status');
+      const url = input.value.trim();
+
+      if (!url) { status.textContent = 'Please paste a calendar URL.'; status.className = 'ics-url-status error'; return; }
+      if (!url.startsWith('https://')) { status.textContent = 'URL must start with https://'; status.className = 'ics-url-status error'; return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Fetching…';
+      status.textContent = 'Downloading calendar…';
+      status.className = 'ics-url-status';
+
+      try {
+        const resp = await fetch('/api/fetch-ics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        if (!resp.ok) {
+          const err = await resp.text();
+          throw new Error(err || 'Failed to fetch calendar');
+        }
+        const icsText = await resp.text();
+        const events = window.MeetingMeterICS.parseICS(icsText);
+        if (events.length === 0) throw new Error('No events found in calendar.');
+
+        localStorage.setItem('mm_events', JSON.stringify(events));
+        status.textContent = `✓ ${events.length} events loaded! Redirecting…`;
+        status.className = 'ics-url-status success';
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+      } catch (err) {
+        console.error('ICS URL fetch failed:', err);
+        status.textContent = err.message || 'Failed to fetch calendar.';
+        status.className = 'ics-url-status error';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Import';
+      }
+    }
+
+    // Allow Enter key in URL input
+    document.getElementById('ics-url-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') fetchICSFromURL();
+    });
 
     // ICS upload
     const uploadZone = document.getElementById('upload-zone');
