@@ -88,8 +88,8 @@
   }
 
   // 5. Meeting heatmap (custom canvas)
-  function renderHeatmap(canvasId, events, days) {
-    const grid = window.MeetingMeterAnalyzer.heatmapData(events, days);
+  function renderHeatmap(canvasId, events, periodDays) {
+    const grid = window.MeetingMeterAnalyzer.heatmapData(events, periodDays);
     const canvas = document.getElementById(canvasId);
     const ctx = canvas.getContext('2d');
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
