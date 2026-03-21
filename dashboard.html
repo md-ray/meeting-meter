@@ -70,7 +70,7 @@
           <h3>Day of Week Pattern</h3>
           <canvas id="chart-dow"></canvas>
         </div>
-        <div class="chart-card">
+        <div class="chart-card" id="chart-size-card">
           <h3>Meeting Size Breakdown</h3>
           <canvas id="chart-size"></canvas>
         </div>
@@ -86,8 +86,8 @@
         </div>
       </div>
 
-      <!-- Top Contacts -->
-      <div class="card" style="margin: 24px 0">
+      <!-- Top Contacts (hidden if no attendee data) -->
+      <div class="card" style="margin: 24px 0" id="contacts-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px">
           <h3 style="margin: 0">Top Contacts</h3>
           <div style="display: flex; align-items: center; gap: 8px">
@@ -265,11 +265,19 @@
       window.MeetingMeterCharts.renderDayOfWeek('chart-dow', events);
       window.MeetingMeterCharts.renderHeatmap('chart-heatmap', events);
       window.MeetingMeterCharts.renderWeeklyTrend('chart-weekly-trend', events);
-      window.MeetingMeterCharts.renderMeetingSize('chart-size', events);
 
-      // Top contacts (with exclude filter)
-      _allContacts = window.MeetingMeterAnalyzer.computeTopContacts(events);
-      renderContacts();
+      // Check if we have attendee data at all
+      const hasAttendees = events.some(e => e.attendees && e.attendees.length > 0);
+
+      if (hasAttendees) {
+        // Top contacts (with exclude filter)
+        _allContacts = window.MeetingMeterAnalyzer.computeTopContacts(events);
+        renderContacts();
+        window.MeetingMeterCharts.renderMeetingSize('chart-size', events);
+      } else {
+        document.getElementById('contacts-section').style.display = 'none';
+        document.getElementById('chart-size-card').style.display = 'none';
+      }
 
       // Focus time
       const focus = window.MeetingMeterAnalyzer.computeFocusTime(events);
