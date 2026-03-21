@@ -174,10 +174,10 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="js/score.js?v=2"></script>
-  <script src="js/analyzer.js?v=2"></script>
-  <script src="js/charts.js?v=2"></script>
-  <script src="js/share.js?v=2"></script>
+  <script src="js/score.js?v=3"></script>
+  <script src="js/analyzer.js?v=3"></script>
+  <script src="js/charts.js?v=3"></script>
+  <script src="js/share.js?v=3"></script>
   <script>
     let _currentPeriod = 30;
     let _allEvents = [];
@@ -340,11 +340,24 @@
       `).join('');
     }
 
-    let _chartInstances = [];
+    const CHART_IDS = ['chart-meetings-day', 'chart-online-offline', 'chart-duration', 'chart-dow', 'chart-heatmap', 'chart-weekly-trend', 'chart-size'];
 
     function destroyCharts() {
-      _chartInstances.forEach(c => { try { c.destroy(); } catch(_) {} });
-      _chartInstances = [];
+      CHART_IDS.forEach(id => {
+        const existing = Chart.getChart(id);
+        if (existing) existing.destroy();
+        // Reset canvas to clear any non-Chart.js rendering (heatmap)
+        const canvas = document.getElementById(id);
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          // Reset dimensions so Chart.js can recalculate
+          canvas.removeAttribute('width');
+          canvas.removeAttribute('height');
+          canvas.style.width = '';
+          canvas.style.height = '';
+        }
+      });
     }
 
     function renderDashboard(events, days) {
@@ -366,12 +379,12 @@
       document.getElementById('stat-btb').textContent = summary.backToBackPct + '%';
 
       // Charts
-      _chartInstances.push(window.MeetingMeterCharts.renderMeetingsPerDay('chart-meetings-day', events, days));
-      _chartInstances.push(window.MeetingMeterCharts.renderOnlineVsOffline('chart-online-offline', events, days));
-      _chartInstances.push(window.MeetingMeterCharts.renderDurationDistribution('chart-duration', events, days));
-      _chartInstances.push(window.MeetingMeterCharts.renderDayOfWeek('chart-dow', events, days));
-      _chartInstances.push(window.MeetingMeterCharts.renderHeatmap('chart-heatmap', events, days));
-      _chartInstances.push(window.MeetingMeterCharts.renderWeeklyTrend('chart-weekly-trend', events, days));
+      window.MeetingMeterCharts.renderMeetingsPerDay('chart-meetings-day', events, days);
+      window.MeetingMeterCharts.renderOnlineVsOffline('chart-online-offline', events, days);
+      window.MeetingMeterCharts.renderDurationDistribution('chart-duration', events, days);
+      window.MeetingMeterCharts.renderDayOfWeek('chart-dow', events, days);
+      window.MeetingMeterCharts.renderHeatmap('chart-heatmap', events, days);
+      window.MeetingMeterCharts.renderWeeklyTrend('chart-weekly-trend', events, days);
 
       // Check if we have attendee data at all
       const hasAttendees = events.some(e => e.attendees && e.attendees.length > 0);
@@ -381,7 +394,7 @@
         document.getElementById('chart-size-card').style.display = '';
         _allContacts = window.MeetingMeterAnalyzer.computeTopContacts(events);
         renderContacts();
-        _chartInstances.push(window.MeetingMeterCharts.renderMeetingSize('chart-size', events, days));
+        window.MeetingMeterCharts.renderMeetingSize('chart-size', events, days);
       } else {
         document.getElementById('contacts-section').style.display = 'none';
         document.getElementById('chart-size-card').style.display = 'none';
