@@ -174,10 +174,10 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="js/score.js?v=3"></script>
-  <script src="js/analyzer.js?v=3"></script>
-  <script src="js/charts.js?v=3"></script>
-  <script src="js/share.js?v=3"></script>
+  <script src="js/score.js?v=4"></script>
+  <script src="js/analyzer.js?v=4"></script>
+  <script src="js/charts.js?v=4"></script>
+  <script src="js/share.js?v=4"></script>
   <script>
     let _currentPeriod = 30;
     let _allEvents = [];
@@ -340,24 +340,22 @@
       `).join('');
     }
 
-    const CHART_IDS = ['chart-meetings-day', 'chart-online-offline', 'chart-duration', 'chart-dow', 'chart-heatmap', 'chart-weekly-trend', 'chart-size'];
+    const CHART_IDS = ['chart-meetings-day', 'chart-online-offline', 'chart-duration', 'chart-dow', 'chart-weekly-trend', 'chart-size'];
 
     function destroyCharts() {
+      // Destroy Chart.js instances
       CHART_IDS.forEach(id => {
         const existing = Chart.getChart(id);
         if (existing) existing.destroy();
-        // Reset canvas to clear any non-Chart.js rendering (heatmap)
-        const canvas = document.getElementById(id);
-        if (canvas) {
-          const ctx = canvas.getContext('2d');
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          // Reset dimensions so Chart.js can recalculate
-          canvas.removeAttribute('width');
-          canvas.removeAttribute('height');
-          canvas.style.width = '';
-          canvas.style.height = '';
-        }
       });
+      // Heatmap is custom canvas — replace the element to fully reset
+      const hm = document.getElementById('chart-heatmap');
+      if (hm) {
+        const parent = hm.parentNode;
+        const newCanvas = document.createElement('canvas');
+        newCanvas.id = 'chart-heatmap';
+        parent.replaceChild(newCanvas, hm);
+      }
     }
 
     function renderDashboard(events, days) {
