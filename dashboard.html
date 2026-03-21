@@ -289,20 +289,23 @@
             <div class="fw-icon">&#127775;</div>
             <div class="fw-text">
               <strong>Best deep work window: ${focus.bestWindow.day} ${focus.bestWindow.start}–${focus.bestWindow.end}</strong>
-              Your most consistent free block
+              ${focus.bestWindow.hours}h free — consistently open ${focus.bestWindow.frequency}% of weeks
             </div>
           </div>`;
       }
-      focus.topWindows.forEach((w, i) => {
+      focus.topWindows.slice(1).forEach((w) => {
         fwEl.innerHTML += `
           <div class="focus-window">
             <div class="fw-icon">&#9201;</div>
             <div class="fw-text">
               <strong>${w.day} ${w.start}–${w.end}</strong>
-              ${w.hours} hours free
+              ${w.hours}h free — open ${w.frequency}% of weeks
             </div>
           </div>`;
       });
+      if (focus.topWindows.length === 0) {
+        fwEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.875rem">No consistent free blocks found. Your calendar is packed! 😅</p>';
+      }
 
       // Diet suggestions
       const suggestions = window.MeetingMeterAnalyzer.computeDietSuggestions(events);

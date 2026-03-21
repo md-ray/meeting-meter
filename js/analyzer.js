@@ -51,7 +51,9 @@
     });
 
     const dailyFocus = [];
-    const allWindows = [];
+    // Track free blocks per day-of-week for pattern detection
+    const dowBlocks = {}; // { Monday: [ [blocks from week1], [blocks from week2], ... ] }
+    DAY_NAMES.forEach(d => { dowBlocks[d] = []; });
 
     // Get all weekdays in last 30 days
     const now = new Date();
@@ -61,7 +63,6 @@
     for (let d = new Date(thirtyAgo); d <= now; d.setDate(d.getDate() + 1)) {
       const dow = d.getDay();
       if (dow === 0 || dow === 6) continue;
-      // Use local date string to avoid UTC timezone mismatch
       const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       const dayName = DAY_NAMES[dow];
       const dayEvents = (byDate[dateStr] || [])
@@ -72,6 +73,9 @@
         .filter(e => e.end > e.start)
         .sort((a, b) => a.start - b.start);
 
+      // Skip days with zero meetings (leave/holiday — not a real pattern)
+      if (dayEvents.length === 0) continue;
+
       // Find free blocks
       let cursor = WORK_START;
       let focusHours = 0;
@@ -81,7 +85,7 @@
         if (e.start > cursor) {
           const gap = e.start - cursor;
           focusHours += gap;
-          blocks.push({ day: dayName, date: dateStr, start: cursor, end: e.start, hours: gap });
+          blocks.push({ start: cursor, end: e.start, hours: gap });
         }
         cursor = Math.max(cursor, e.end);
       });
@@ -89,47 +93,73 @@
       if (cursor < WORK_END) {
         const gap = WORK_END - cursor;
         focusHours += gap;
-        blocks.push({ day: dayName, date: dateStr, start: cursor, end: WORK_END, hours: gap });
+        blocks.push({ start: cursor, end: WORK_END, hours: gap });
       }
 
       dailyFocus.push(focusHours);
-      allWindows.push(...blocks);
+      dowBlocks[dayName].push(blocks);
     }
 
     const avgFocusHoursPerDay = dailyFocus.length > 0
       ? Math.round((dailyFocus.reduce((s, v) => s + v, 0) / dailyFocus.length) * 10) / 10
       : 0;
 
-    // Top 3 windows by contiguous hours
-    allWindows.sort((a, b) => b.hours - a.hours);
-    const topWindows = allWindows.slice(0, 3).map(w => ({
+    // Find consistent free slots by day-of-week
+    // For each DOW, discretize into 30-min slots and count how often each is free
+    const SLOT_SIZE = 0.5; // 30 minutes
+    const dowPatterns = []; // { day, start, end, hours, frequency }
+
+    Object.entries(dowBlocks).forEach(([dayName, weeksList]) => {
+      if (weeksList.length < 2) return; // Need at least 2 data points
+      const totalWeeks = weeksList.length;
+      const slotCount = (WORK_END - WORK_START) / SLOT_SIZE;
+      const freeCount = new Array(Math.round(slotCount)).fill(0);
+
+      // Count how many weeks each slot was free
+      weeksList.forEach(blocks => {
+        for (let s = 0; s < freeCount.length; s++) {
+          const slotStart = WORK_START + s * SLOT_SIZE;
+          const slotEnd = slotStart + SLOT_SIZE;
+          const isFree = blocks.some(b => b.start <= slotStart && b.end >= slotEnd);
+          if (isFree) freeCount[s]++;
+        }
+      });
+
+      // Find contiguous runs of slots that are free ≥60% of the time
+      const threshold = totalWeeks * 0.6;
+      let runStart = null;
+      for (let s = 0; s <= freeCount.length; s++) {
+        if (s < freeCount.length && freeCount[s] >= threshold) {
+          if (runStart === null) runStart = s;
+        } else {
+          if (runStart !== null) {
+            const start = WORK_START + runStart * SLOT_SIZE;
+            const end = WORK_START + s * SLOT_SIZE;
+            const hours = end - start;
+            if (hours >= 1) { // Only show blocks ≥ 1 hour
+              const avgFreq = Math.round(
+                freeCount.slice(runStart, s).reduce((a, b) => a + b, 0) / (s - runStart) / totalWeeks * 100
+              );
+              dowPatterns.push({ day: dayName, start, end, hours, frequency: avgFreq });
+            }
+            runStart = null;
+          }
+        }
+      }
+    });
+
+    // Sort by hours descending, then frequency
+    dowPatterns.sort((a, b) => b.hours - a.hours || b.frequency - a.frequency);
+
+    const topWindows = dowPatterns.slice(0, 4).map(w => ({
       day: w.day,
       start: formatHour(w.start),
       end: formatHour(w.end),
       hours: Math.round(w.hours * 10) / 10,
+      frequency: w.frequency,
     }));
 
-    // Best recurring window by day of week
-    const byDow = {};
-    allWindows.forEach(w => {
-      if (!byDow[w.day]) byDow[w.day] = [];
-      byDow[w.day].push(w);
-    });
-
-    let bestDay = null;
-    let bestAvg = 0;
-    Object.entries(byDow).forEach(([day, windows]) => {
-      // Find the longest contiguous block on average for this day
-      const maxBlocks = windows.sort((a, b) => b.hours - a.hours);
-      const avg = maxBlocks.length > 0 ? maxBlocks.reduce((s, w) => s + w.hours, 0) / maxBlocks.length : 0;
-      if (avg > bestAvg) { bestAvg = avg; bestDay = day; }
-    });
-
-    let bestWindow = null;
-    if (bestDay && byDow[bestDay].length > 0) {
-      const best = byDow[bestDay].sort((a, b) => b.hours - a.hours)[0];
-      bestWindow = { day: bestDay, start: formatHour(best.start), end: formatHour(best.end) };
-    }
+    const bestWindow = topWindows.length > 0 ? topWindows[0] : null;
 
     return { avgFocusHoursPerDay, topWindows, bestWindow };
   }
