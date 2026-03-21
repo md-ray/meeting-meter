@@ -1,9 +1,10 @@
 // MeetingMeter — MeetingLoad Score™
 (function () {
-  function computeScore(events) {
+  function computeScore(events, days) {
+    const d = days || 30;
     const now = new Date();
     const thirtyDaysAgo = new Date(now);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - d);
 
     const recent = events.filter(e => {
       const d = new Date(e.start);

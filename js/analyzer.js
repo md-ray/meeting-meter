@@ -36,8 +36,8 @@
   }
 
   // ---- Focus Time Finder (MM-9) ----
-  function computeFocusTime(events, workStart, workEnd) {
-    const recent = getRecentEvents(events, 30);
+  function computeFocusTime(events, workStart, workEnd, days) {
+    const recent = getRecentEvents(events, days || 30);
     const WORK_START = workStart || 8;
     const WORK_END = workEnd || 17;
 
@@ -57,8 +57,9 @@
 
     // Get all weekdays in last 30 days
     const now = new Date();
+    const periodDays = days || 30;
     const thirtyAgo = new Date(now);
-    thirtyAgo.setDate(thirtyAgo.getDate() - 30);
+    thirtyAgo.setDate(thirtyAgo.getDate() - periodDays);
 
     for (let d = new Date(thirtyAgo); d <= now; d.setDate(d.getDate() + 1)) {
       const dow = d.getDay();
@@ -171,8 +172,8 @@
   }
 
   // ---- Meeting Diet Suggestions (MM-10) ----
-  function computeDietSuggestions(events) {
-    const recent = getRecentEvents(events, 30);
+  function computeDietSuggestions(events, days) {
+    const recent = getRecentEvents(events, days || 30);
     const suggestions = [];
 
     // Could be email: <15min AND >5 attendees
@@ -271,15 +272,15 @@
     return { labels, data };
   }
 
-  function onlineVsOffline(events) {
-    const recent = getRecentEvents(events, 30);
+  function onlineVsOffline(events, days) {
+    const recent = getRecentEvents(events, days || 30);
     let online = 0, offline = 0;
     recent.forEach(e => e.isOnline ? online++ : offline++);
     return { online, offline };
   }
 
-  function durationDistribution(events) {
-    const recent = getRecentEvents(events, 30);
+  function durationDistribution(events, days) {
+    const recent = getRecentEvents(events, days || 30);
     const buckets = { '<15': 0, '15-30': 0, '30-60': 0, '60-90': 0, '90+': 0 };
     recent.forEach(e => {
       const d = e.duration_min || 0;
@@ -292,8 +293,8 @@
     return buckets;
   }
 
-  function dayOfWeekPattern(events) {
-    const recent = getRecentEvents(events, 30);
+  function dayOfWeekPattern(events, days) {
+    const recent = getRecentEvents(events, days || 30);
     const counts = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
     recent.forEach(e => {
       const dow = new Date(e.start).getDay();
@@ -306,8 +307,8 @@
     };
   }
 
-  function heatmapData(events) {
-    const recent = getRecentEvents(events, 30);
+  function heatmapData(events, days) {
+    const recent = getRecentEvents(events, days || 30);
     // 7 days (Mon=0..Sun=6) × 24 hours
     const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
     recent.forEach(e => {
@@ -339,8 +340,8 @@
     return { labels, data };
   }
 
-  function meetingSizeBreakdown(events) {
-    const recent = getRecentEvents(events, 30);
+  function meetingSizeBreakdown(events, days) {
+    const recent = getRecentEvents(events, days || 30);
     const sizes = { '1:1': 0, 'Small (3-5)': 0, 'Large (6-10)': 0, 'XL (10+)': 0 };
     recent.forEach(e => {
       const n = (e.attendees?.length || 0) + 1; // include organizer
@@ -353,9 +354,10 @@
   }
 
   // ---- Summary stats ----
-  function computeSummary(events) {
-    const recent = getRecentEvents(events, 30);
-    const weeks = 30 / 7;
+  function computeSummary(events, days) {
+    const d = days || 30;
+    const recent = getRecentEvents(events, d);
+    const weeks = d / 7;
     const totalMeetings = recent.length;
     const totalMin = recent.reduce((s, e) => s + (e.duration_min || 0), 0);
     const avgDuration = totalMeetings > 0 ? Math.round(totalMin / totalMeetings) : 0;

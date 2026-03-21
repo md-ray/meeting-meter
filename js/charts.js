@@ -26,8 +26,8 @@
   }
 
   // 1. Meetings per day (bar)
-  function renderMeetingsPerDay(canvasId, events) {
-    const { labels, data } = window.MeetingMeterAnalyzer.meetingsPerDay(events);
+  function renderMeetingsPerDay(canvasId, events, days) {
+    const { labels, data } = window.MeetingMeterAnalyzer.meetingsPerDay(events, days);
     return new Chart(document.getElementById(canvasId), {
       type: 'bar',
       data: {
@@ -39,8 +39,8 @@
   }
 
   // 2. Online vs Offline (donut)
-  function renderOnlineVsOffline(canvasId, events) {
-    const { online, offline } = window.MeetingMeterAnalyzer.onlineVsOffline(events);
+  function renderOnlineVsOffline(canvasId, events, days) {
+    const { online, offline } = window.MeetingMeterAnalyzer.onlineVsOffline(events, days);
     return new Chart(document.getElementById(canvasId), {
       type: 'doughnut',
       data: {
@@ -62,8 +62,8 @@
   }
 
   // 3. Duration distribution (bar)
-  function renderDurationDistribution(canvasId, events) {
-    const buckets = window.MeetingMeterAnalyzer.durationDistribution(events);
+  function renderDurationDistribution(canvasId, events, days) {
+    const buckets = window.MeetingMeterAnalyzer.durationDistribution(events, days);
     return new Chart(document.getElementById(canvasId), {
       type: 'bar',
       data: {
@@ -75,8 +75,8 @@
   }
 
   // 4. Day of week pattern (bar)
-  function renderDayOfWeek(canvasId, events) {
-    const { labels, data } = window.MeetingMeterAnalyzer.dayOfWeekPattern(events);
+  function renderDayOfWeek(canvasId, events, days) {
+    const { labels, data } = window.MeetingMeterAnalyzer.dayOfWeekPattern(events, days);
     return new Chart(document.getElementById(canvasId), {
       type: 'bar',
       data: {
@@ -88,8 +88,8 @@
   }
 
   // 5. Meeting heatmap (custom canvas)
-  function renderHeatmap(canvasId, events) {
-    const grid = window.MeetingMeterAnalyzer.heatmapData(events);
+  function renderHeatmap(canvasId, events, days) {
+    const grid = window.MeetingMeterAnalyzer.heatmapData(events, days);
     const canvas = document.getElementById(canvasId);
     const ctx = canvas.getContext('2d');
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -143,8 +143,9 @@
   }
 
   // 6. Weekly hours trend (line)
-  function renderWeeklyTrend(canvasId, events) {
-    const { labels, data } = window.MeetingMeterAnalyzer.weeklyTrend(events);
+  function renderWeeklyTrend(canvasId, events, days) {
+    const weeks = days ? Math.ceil(days / 7) : 12;
+    const { labels, data } = window.MeetingMeterAnalyzer.weeklyTrend(events, weeks);
     return new Chart(document.getElementById(canvasId), {
       type: 'line',
       data: {
@@ -164,8 +165,8 @@
   }
 
   // 7. Meeting size breakdown (horizontal bar)
-  function renderMeetingSize(canvasId, events) {
-    const sizes = window.MeetingMeterAnalyzer.meetingSizeBreakdown(events);
+  function renderMeetingSize(canvasId, events, days) {
+    const sizes = window.MeetingMeterAnalyzer.meetingSizeBreakdown(events, days);
     return new Chart(document.getElementById(canvasId), {
       type: 'bar',
       data: {

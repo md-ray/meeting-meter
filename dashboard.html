@@ -27,6 +27,9 @@
     <div id="dashboard" style="display:none">
       <!-- Settings Bar -->
       <div class="settings-bar" id="settings-bar">
+        <span class="settings-label">Period:</span>
+        <select id="analysis-period" class="settings-select" onchange="updatePeriod()"></select>
+        <span class="settings-divider">|</span>
         <span class="settings-label">Work hours:</span>
         <select id="work-start" class="settings-select" onchange="updateWorkHours()">
           <option value="6">06:00</option>
@@ -176,6 +179,55 @@
   <script src="js/charts.js?v=2"></script>
   <script src="js/share.js?v=2"></script>
   <script>
+    let _currentPeriod = 30;
+    let _allEvents = [];
+
+    function getDataRangeDays(events) {
+      if (!events || events.length === 0) return 0;
+      const now = new Date();
+      const dates = events.map(e => new Date(e.start)).filter(d => d <= now);
+      if (dates.length === 0) return 0;
+      const earliest = new Date(Math.min(...dates));
+      return Math.ceil((now - earliest) / (1000 * 60 * 60 * 24));
+    }
+
+    function buildPeriodOptions(events) {
+      const available = getDataRangeDays(events);
+      const select = document.getElementById('analysis-period');
+      const options = [
+        { value: 7, label: 'Last 7 days' },
+        { value: 14, label: 'Last 14 days' },
+        { value: 30, label: 'Last 30 days' },
+        { value: 60, label: 'Last 60 days' },
+        { value: 90, label: 'Last 90 days' },
+        { value: 180, label: 'Last 6 months' },
+        { value: 365, label: 'Last year' },
+      ].filter(o => o.value <= available);
+
+      // Always show at least one option
+      if (options.length === 0) options.push({ value: available, label: `Last ${available} days` });
+
+      const saved = parseInt(localStorage.getItem('mm_period') || '30');
+      select.innerHTML = options.map(o =>
+        `<option value="${o.value}" ${o.value === saved && saved <= available ? 'selected' : ''}>${o.label}</option>`
+      ).join('');
+
+      // If saved period exceeds available, pick largest available
+      const validValues = options.map(o => o.value);
+      if (!validValues.includes(saved)) {
+        select.value = validValues[validValues.length - 1];
+      }
+
+      _currentPeriod = parseInt(select.value);
+      return _currentPeriod;
+    }
+
+    function updatePeriod() {
+      _currentPeriod = parseInt(document.getElementById('analysis-period').value);
+      localStorage.setItem('mm_period', _currentPeriod);
+      renderDashboard(_allEvents, _currentPeriod);
+    }
+
     function getWorkHours() {
       try {
         const saved = JSON.parse(localStorage.getItem('mm_work_hours') || '{}');
@@ -188,16 +240,13 @@
       const end = parseInt(document.getElementById('work-end').value);
       if (start >= end) { alert('Start must be before end.'); return; }
       localStorage.setItem('mm_work_hours', JSON.stringify({ start, end }));
-      // Re-render focus time section
-      const raw = localStorage.getItem('mm_events');
-      if (!raw) return;
-      const events = JSON.parse(raw);
-      renderFocusTime(events, start, end);
+      renderFocusTime(_allEvents, start, end, _currentPeriod);
     }
 
-    function renderFocusTime(events, workStart, workEnd) {
-      const focus = window.MeetingMeterAnalyzer.computeFocusTime(events, workStart, workEnd);
-      document.getElementById('focus-summary').innerHTML = `Average focus time: <strong>${focus.avgFocusHoursPerDay} hrs/day</strong> <span style="color:var(--text-muted);font-size:0.75rem">(weekdays, last 30 days, ${String(workStart).padStart(2,'0')}:00–${String(workEnd).padStart(2,'0')}:00)</span>`;
+    function renderFocusTime(events, workStart, workEnd, days) {
+      const d = days || _currentPeriod || 30;
+      const focus = window.MeetingMeterAnalyzer.computeFocusTime(events, workStart, workEnd, d);
+      document.getElementById('focus-summary').innerHTML = `Average focus time: <strong>${focus.avgFocusHoursPerDay} hrs/day</strong> <span style="color:var(--text-muted);font-size:0.75rem">(weekdays, last ${d} days, ${String(workStart).padStart(2,'0')}:00–${String(workEnd).padStart(2,'0')}:00)</span>`;
       const fwEl = document.getElementById('focus-windows');
       fwEl.innerHTML = '';
       if (focus.bestWindow) {
@@ -291,30 +340,18 @@
       `).join('');
     }
 
-    (function init() {
-      const raw = localStorage.getItem('mm_events');
-      if (!raw) {
-        document.getElementById('no-data').style.display = 'block';
-        return;
-      }
+    let _chartInstances = [];
 
-      let events;
-      try {
-        events = JSON.parse(raw);
-      } catch (_) {
-        document.getElementById('no-data').style.display = 'block';
-        return;
-      }
+    function destroyCharts() {
+      _chartInstances.forEach(c => { try { c.destroy(); } catch(_) {} });
+      _chartInstances = [];
+    }
 
-      if (!events || events.length === 0) {
-        document.getElementById('no-data').style.display = 'block';
-        return;
-      }
-
-      document.getElementById('dashboard').style.display = 'block';
+    function renderDashboard(events, days) {
+      destroyCharts();
 
       // Score
-      const scoreData = window.MeetingMeterScore.computeScore(events);
+      const scoreData = window.MeetingMeterScore.computeScore(events, days);
       document.getElementById('score-number').textContent = scoreData.score;
       document.getElementById('score-number').style.color = scoreData.color;
       document.getElementById('score-label').textContent = scoreData.label;
@@ -322,45 +359,49 @@
       document.getElementById('score-badge').style.borderLeft = `4px solid ${scoreData.color}`;
 
       // Summary stats
-      const summary = window.MeetingMeterAnalyzer.computeSummary(events);
+      const summary = window.MeetingMeterAnalyzer.computeSummary(events, days);
       document.getElementById('stat-meetings-week').textContent = summary.meetingsPerWeek;
       document.getElementById('stat-hours-week').textContent = summary.hoursPerWeek + 'h';
       document.getElementById('stat-avg-duration').textContent = summary.avgDuration + 'min';
       document.getElementById('stat-btb').textContent = summary.backToBackPct + '%';
 
       // Charts
-      window.MeetingMeterCharts.renderMeetingsPerDay('chart-meetings-day', events);
-      window.MeetingMeterCharts.renderOnlineVsOffline('chart-online-offline', events);
-      window.MeetingMeterCharts.renderDurationDistribution('chart-duration', events);
-      window.MeetingMeterCharts.renderDayOfWeek('chart-dow', events);
-      window.MeetingMeterCharts.renderHeatmap('chart-heatmap', events);
-      window.MeetingMeterCharts.renderWeeklyTrend('chart-weekly-trend', events);
+      _chartInstances.push(window.MeetingMeterCharts.renderMeetingsPerDay('chart-meetings-day', events, days));
+      _chartInstances.push(window.MeetingMeterCharts.renderOnlineVsOffline('chart-online-offline', events, days));
+      _chartInstances.push(window.MeetingMeterCharts.renderDurationDistribution('chart-duration', events, days));
+      _chartInstances.push(window.MeetingMeterCharts.renderDayOfWeek('chart-dow', events, days));
+      _chartInstances.push(window.MeetingMeterCharts.renderHeatmap('chart-heatmap', events, days));
+      _chartInstances.push(window.MeetingMeterCharts.renderWeeklyTrend('chart-weekly-trend', events, days));
 
       // Check if we have attendee data at all
       const hasAttendees = events.some(e => e.attendees && e.attendees.length > 0);
 
       if (hasAttendees) {
-        // Top contacts (with exclude filter)
+        document.getElementById('contacts-section').style.display = '';
+        document.getElementById('chart-size-card').style.display = '';
         _allContacts = window.MeetingMeterAnalyzer.computeTopContacts(events);
         renderContacts();
-        window.MeetingMeterCharts.renderMeetingSize('chart-size', events);
+        _chartInstances.push(window.MeetingMeterCharts.renderMeetingSize('chart-size', events, days));
       } else {
         document.getElementById('contacts-section').style.display = 'none';
         document.getElementById('chart-size-card').style.display = 'none';
       }
 
-      // Focus time (uses configurable work hours)
+      // Focus time
       const wh = getWorkHours();
       document.getElementById('work-start').value = wh.start;
       document.getElementById('work-end').value = wh.end;
-      renderFocusTime(events, wh.start, wh.end);
+      renderFocusTime(events, wh.start, wh.end, days);
 
       // Diet suggestions
-      const suggestions = window.MeetingMeterAnalyzer.computeDietSuggestions(events);
+      const suggestions = window.MeetingMeterAnalyzer.computeDietSuggestions(events, days);
       const dietEl = document.getElementById('diet-suggestions');
+      const dietEmpty = document.getElementById('diet-empty');
       if (suggestions.length === 0) {
-        document.getElementById('diet-empty').style.display = 'block';
+        dietEl.innerHTML = '';
+        dietEmpty.style.display = 'block';
       } else {
+        dietEmpty.style.display = 'none';
         dietEl.innerHTML = suggestions.map(s => `
           <div class="suggestion-card">
             <div class="sg-icon">${s.icon}</div>
@@ -377,6 +418,30 @@
       window.MeetingMeterShare.buildScoreCard(scoreData, summary);
       document.getElementById('share-caption').value =
         window.MeetingMeterShare.getLinkedInCaption(scoreData.score, summary.hoursPerWeek);
+    }
+
+    (function init() {
+      const raw = localStorage.getItem('mm_events');
+      if (!raw) {
+        document.getElementById('no-data').style.display = 'block';
+        return;
+      }
+
+      try {
+        _allEvents = JSON.parse(raw);
+      } catch (_) {
+        document.getElementById('no-data').style.display = 'block';
+        return;
+      }
+
+      if (!_allEvents || _allEvents.length === 0) {
+        document.getElementById('no-data').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('dashboard').style.display = 'block';
+      _currentPeriod = buildPeriodOptions(_allEvents);
+      renderDashboard(_allEvents, _currentPeriod);
     })();
 
     function escapeHtml(str) {
