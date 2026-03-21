@@ -36,10 +36,10 @@
   }
 
   // ---- Focus Time Finder (MM-9) ----
-  function computeFocusTime(events) {
+  function computeFocusTime(events, workStart, workEnd) {
     const recent = getRecentEvents(events, 30);
-    const WORK_START = 8;
-    const WORK_END = 19;
+    const WORK_START = workStart || 8;
+    const WORK_END = workEnd || 17;
 
     // Group by LOCAL date (not UTC) to match local day-of-week
     const byDate = {};

@@ -425,6 +425,39 @@ a:hover { text-decoration: underline; }
   border-color: var(--red);
 }
 
+/* Settings bar */
+.settings-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.8125rem;
+  flex-wrap: wrap;
+}
+
+.settings-label {
+  color: var(--text-muted);
+}
+
+.settings-select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 4px 8px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.settings-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
 /* Focus time */
 .focus-windows {
   display: flex;

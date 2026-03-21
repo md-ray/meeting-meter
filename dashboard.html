@@ -25,6 +25,27 @@
 
     <!-- Dashboard content -->
     <div id="dashboard" style="display:none">
+      <!-- Settings Bar -->
+      <div class="settings-bar" id="settings-bar">
+        <span class="settings-label">Work hours:</span>
+        <select id="work-start" class="settings-select" onchange="updateWorkHours()">
+          <option value="6">06:00</option>
+          <option value="7">07:00</option>
+          <option value="8" selected>08:00</option>
+          <option value="9">09:00</option>
+          <option value="10">10:00</option>
+        </select>
+        <span class="settings-label">to</span>
+        <select id="work-end" class="settings-select" onchange="updateWorkHours()">
+          <option value="15">15:00</option>
+          <option value="16">16:00</option>
+          <option value="17" selected>17:00</option>
+          <option value="18">18:00</option>
+          <option value="19">19:00</option>
+          <option value="20">20:00</option>
+        </select>
+      </div>
+
       <!-- Score Badge -->
       <div class="card score-badge" id="score-badge">
         <div class="score-sublabel">MeetingLoad Score&trade;</div>
@@ -155,6 +176,55 @@
   <script src="js/charts.js?v=2"></script>
   <script src="js/share.js?v=2"></script>
   <script>
+    function getWorkHours() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('mm_work_hours') || '{}');
+        return { start: saved.start || 8, end: saved.end || 17 };
+      } catch (_) { return { start: 8, end: 17 }; }
+    }
+
+    function updateWorkHours() {
+      const start = parseInt(document.getElementById('work-start').value);
+      const end = parseInt(document.getElementById('work-end').value);
+      if (start >= end) { alert('Start must be before end.'); return; }
+      localStorage.setItem('mm_work_hours', JSON.stringify({ start, end }));
+      // Re-render focus time section
+      const raw = localStorage.getItem('mm_events');
+      if (!raw) return;
+      const events = JSON.parse(raw);
+      renderFocusTime(events, start, end);
+    }
+
+    function renderFocusTime(events, workStart, workEnd) {
+      const focus = window.MeetingMeterAnalyzer.computeFocusTime(events, workStart, workEnd);
+      document.getElementById('focus-summary').innerHTML = `Average focus time: <strong>${focus.avgFocusHoursPerDay} hrs/day</strong> <span style="color:var(--text-muted);font-size:0.75rem">(weekdays, last 30 days, ${String(workStart).padStart(2,'0')}:00–${String(workEnd).padStart(2,'0')}:00)</span>`;
+      const fwEl = document.getElementById('focus-windows');
+      fwEl.innerHTML = '';
+      if (focus.bestWindow) {
+        fwEl.innerHTML += `
+          <div class="focus-window">
+            <div class="fw-icon">&#127775;</div>
+            <div class="fw-text">
+              <strong>Best deep work window: ${focus.bestWindow.day} ${focus.bestWindow.start}–${focus.bestWindow.end}</strong>
+              ${focus.bestWindow.hours}h free — consistently open ${focus.bestWindow.frequency}% of weeks
+            </div>
+          </div>`;
+      }
+      focus.topWindows.slice(1).forEach((w) => {
+        fwEl.innerHTML += `
+          <div class="focus-window">
+            <div class="fw-icon">&#9201;</div>
+            <div class="fw-text">
+              <strong>${w.day} ${w.start}–${w.end}</strong>
+              ${w.hours}h free — open ${w.frequency}% of weeks
+            </div>
+          </div>`;
+      });
+      if (focus.topWindows.length === 0) {
+        fwEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.875rem">No consistent free blocks found. Your calendar is packed! 😅</p>';
+      }
+    }
+
     function clearData() {
       if (confirm('Clear all calendar data from this browser?')) {
         localStorage.removeItem('mm_events');
@@ -279,33 +349,11 @@
         document.getElementById('chart-size-card').style.display = 'none';
       }
 
-      // Focus time
-      const focus = window.MeetingMeterAnalyzer.computeFocusTime(events);
-      document.getElementById('focus-summary').innerHTML = `Average focus time: <strong>${focus.avgFocusHoursPerDay} hrs/day</strong> <span style="color:var(--text-muted);font-size:0.75rem">(weekdays, last 30 days, 08:00–19:00)</span>`;
-      const fwEl = document.getElementById('focus-windows');
-      if (focus.bestWindow) {
-        fwEl.innerHTML += `
-          <div class="focus-window">
-            <div class="fw-icon">&#127775;</div>
-            <div class="fw-text">
-              <strong>Best deep work window: ${focus.bestWindow.day} ${focus.bestWindow.start}–${focus.bestWindow.end}</strong>
-              ${focus.bestWindow.hours}h free — consistently open ${focus.bestWindow.frequency}% of weeks
-            </div>
-          </div>`;
-      }
-      focus.topWindows.slice(1).forEach((w) => {
-        fwEl.innerHTML += `
-          <div class="focus-window">
-            <div class="fw-icon">&#9201;</div>
-            <div class="fw-text">
-              <strong>${w.day} ${w.start}–${w.end}</strong>
-              ${w.hours}h free — open ${w.frequency}% of weeks
-            </div>
-          </div>`;
-      });
-      if (focus.topWindows.length === 0) {
-        fwEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.875rem">No consistent free blocks found. Your calendar is packed! 😅</p>';
-      }
+      // Focus time (uses configurable work hours)
+      const wh = getWorkHours();
+      document.getElementById('work-start').value = wh.start;
+      document.getElementById('work-end').value = wh.end;
+      renderFocusTime(events, wh.start, wh.end);
 
       // Diet suggestions
       const suggestions = window.MeetingMeterAnalyzer.computeDietSuggestions(events);
