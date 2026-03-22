@@ -130,17 +130,64 @@ a:hover { text-decoration: underline; }
 .hero-actions {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.hero-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+.hero-card {
+  text-align: center;
+}
+
+.hero-card-hint {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-top: 8px;
+}
+
+.hero-connect-btn {
+  width: 100%;
+  padding: 28px 24px !important;
+  font-size: 1rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.connect-icon {
+  font-size: 1.25rem;
+}
+
+.hero-url-row {
+  width: 100%;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.hero-url-label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
 /* Upload zone */
 .upload-zone {
   width: 100%;
-  max-width: 480px;
   border: 2px dashed var(--border);
   border-radius: var(--radius);
-  padding: 32px 24px;
+  padding: 28px 24px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
@@ -168,20 +215,6 @@ a:hover { text-decoration: underline; }
   font-size: 0.8125rem;
   margin-top: 8px;
   display: inline-block;
-}
-
-/* ICS URL input */
-.ics-url-section {
-  margin-top: 16px;
-  width: 100%;
-  max-width: 480px;
-}
-
-.ics-url-divider {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-  margin-bottom: 10px;
 }
 
 .ics-url-input-row {
@@ -832,9 +865,8 @@ a:hover { text-decoration: underline; }
 @media (min-width: 768px) {
   .hero h1 { font-size: 3rem; }
 
-  .hero-actions {
-    flex-direction: row;
-    justify-content: center;
+  .hero-cards {
+    grid-template-columns: 1fr 1fr;
   }
 
   .steps {

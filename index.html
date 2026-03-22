@@ -18,26 +18,32 @@
       <h1>Your calendar does not lie.</h1>
       <p class="subheadline">Find out how much your meetings are actually costing you.</p>
       <div class="hero-actions">
-        <div>
-          <div class="upload-zone" id="upload-zone">
-            <div class="upload-icon">&#128194;</div>
-            <strong>Upload ICS files</strong>
-            <p>Drag &amp; drop or click to browse (supports multiple files)</p>
-            <input type="file" id="ics-input" accept=".ics" multiple hidden>
+        <div class="hero-cards">
+          <div class="hero-card">
+            <div class="upload-zone" id="upload-zone">
+              <div class="upload-icon">&#128194;</div>
+              <strong>Upload ICS files</strong>
+              <p>Drag &amp; drop or click to browse<br>(supports multiple files)</p>
+              <input type="file" id="ics-input" accept=".ics" multiple hidden>
+            </div>
+            <a href="#" class="upload-link" onclick="openExportGuide(event)">How to export your calendar?</a>
           </div>
-          <a href="#" class="upload-link" onclick="openExportGuide(event)">How to export your calendar?</a>
+          <div class="hero-card">
+            <button class="btn btn-secondary btn-lg hero-connect-btn" id="btn-connect" onclick="connectCalendar()">
+              <span class="connect-icon">&#9741;</span>
+              Connect Microsoft Calendar
+            </button>
+            <p class="hero-card-hint">Sign in with device code — works with enterprise accounts</p>
+          </div>
         </div>
-        <div class="ics-url-section">
-          <div class="ics-url-divider">or paste calendar link</div>
+        <div class="hero-url-row">
+          <span class="hero-url-label">Or paste a published calendar link:</span>
           <div class="ics-url-input-row">
             <input type="url" id="ics-url-input" class="ics-url-input" placeholder="https://outlook.office365.com/.../calendar.ics" autocomplete="off">
             <button class="btn btn-primary btn-sm" id="btn-fetch-ics" onclick="fetchICSFromURL()">Import</button>
           </div>
           <div id="ics-url-status" class="ics-url-status"></div>
         </div>
-        <button class="btn btn-secondary btn-lg" id="btn-connect" onclick="connectCalendar()">
-          &#9741; Or connect Microsoft Calendar
-        </button>
       </div>
     </section>
 
