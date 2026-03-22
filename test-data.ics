@@ -1,0 +1,172 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//MeetingMeter//Test Data//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:mm-test-001@meetingmeter
+DTSTART:20260220T090000Z
+DTEND:20260220T100000Z
+SUMMARY:Weekly Team Standup
+ATTENDEE;CN=Alice;RSVP=TRUE:mailto:alice@example.com
+ATTENDEE;CN=Bob:mailto:bob@example.com
+ATTENDEE;CN=Carol:mailto:carol@example.com
+ATTENDEE;CN=Dave:mailto:dave@example.com
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:Microsoft Teams Meeting
+RRULE:FREQ=WEEKLY;COUNT=12
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-002@meetingmeter
+DTSTART:20260220T130000Z
+DTEND:20260220T140000Z
+SUMMARY:1:1 with Bob
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Bob:mailto:bob@example.com
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:Room 5A
+RRULE:FREQ=WEEKLY;COUNT=12
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-003@meetingmeter
+DTSTART:20260220T100000Z
+DTEND:20260220T103000Z
+SUMMARY:Daily Scrum
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Bob:mailto:bob@example.com
+ATTENDEE;CN=Carol:mailto:carol@example.com
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:https://teams.microsoft.com/meet/test
+RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;COUNT=60
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-004@meetingmeter
+DTSTART:20260224T070000Z
+DTEND:20260224T080000Z
+SUMMARY:Architecture Review Board
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Dave:mailto:dave@example.com
+ATTENDEE;CN=Eve:mailto:eve@example.com
+ATTENDEE;CN=Frank:mailto:frank@example.com
+ATTENDEE;CN=Grace:mailto:grace@example.com
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:Room 12B
+RRULE:FREQ=WEEKLY;COUNT=12
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-005@meetingmeter
+DTSTART:20260225T040000Z
+DTEND:20260225T053000Z
+SUMMARY:IT Strategy Workshop
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Dave:mailto:dave@example.com
+ATTENDEE;CN=Heidi:mailto:heidi@example.com
+ORGANIZER;CN=Dave:mailto:dave@example.com
+LOCATION:https://teams.microsoft.com/meet/strategy
+RRULE:FREQ=WEEKLY;COUNT=8
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-006@meetingmeter
+DTSTART:20260226T020000Z
+DTEND:20260226T030000Z
+SUMMARY:Platform Engineering Sync
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Carol:mailto:carol@example.com
+ATTENDEE;CN=Ivan:mailto:ivan@example.com
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:https://teams.microsoft.com/meet/platform
+RRULE:FREQ=WEEKLY;COUNT=12
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-007@meetingmeter
+DTSTART:20260227T070000Z
+DTEND:20260227T073000Z
+SUMMARY:Friday Wrap-up
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Bob:mailto:bob@example.com
+ATTENDEE;CN=Carol:mailto:carol@example.com
+ATTENDEE;CN=Dave:mailto:dave@example.com
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:Room 5A
+RRULE:FREQ=WEEKLY;COUNT=12
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-008@meetingmeter
+DTSTART:20260303T090000Z
+DTEND:20260303T103000Z
+SUMMARY:Quarterly Business Review
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:Boardroom
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-009@meetingmeter
+DTSTART:20260305T060000Z
+DTEND:20260305T070000Z
+SUMMARY:Vendor Evaluation Call
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:https://teams.microsoft.com/meet/vendor
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-010@meetingmeter
+DTSTART:20260220T043000Z
+DTEND:20260220T050000Z
+SUMMARY:Coffee Chat with Mentor
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:Cafeteria
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-011@meetingmeter
+DTSTART:20260310T090000Z
+DTEND:20260310T100000Z
+SUMMARY:All Hands Meeting
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:Town Hall (Virtual)
+RRULE:FREQ=MONTHLY;COUNT=3
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-012@meetingmeter
+DTSTART:20260223T030000Z
+DTEND:20260223T040000Z
+SUMMARY:Sprint Retrospective
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Bob:mailto:bob@example.com
+ATTENDEE;CN=Carol:mailto:carol@example.com
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:Room 3C
+RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=6
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-013@meetingmeter
+DTSTART:20260224T050000Z
+DTEND:20260224T060000Z
+SUMMARY:Cloud Migration Planning
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Dave:mailto:dave@example.com
+ATTENDEE;CN=Eve:mailto:eve@example.com
+ORGANIZER;CN=Alice:mailto:alice@example.com
+LOCATION:https://teams.microsoft.com/meet/cloud
+RRULE:FREQ=WEEKLY;COUNT=12
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-014@meetingmeter
+DTSTART:20260225T080000Z
+DTEND:20260225T090000Z
+SUMMARY:Budget Review
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Heidi:mailto:heidi@example.com
+ORGANIZER;CN=Heidi:mailto:heidi@example.com
+LOCATION:Finance Room
+RRULE:FREQ=MONTHLY;COUNT=3
+END:VEVENT
+BEGIN:VEVENT
+UID:mm-test-015@meetingmeter
+DTSTART:20260226T070000Z
+DTEND:20260226T073000Z
+SUMMARY:Security Standup
+ATTENDEE;CN=Alice:mailto:alice@example.com
+ATTENDEE;CN=Ivan:mailto:ivan@example.com
+ORGANIZER;CN=Ivan:mailto:ivan@example.com
+LOCATION:https://teams.microsoft.com/meet/security
+RRULE:FREQ=WEEKLY;COUNT=12
+END:VEVENT
+END:VCALENDAR
