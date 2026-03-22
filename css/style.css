@@ -146,6 +146,9 @@ a:hover { text-decoration: underline; }
 
 .hero-card {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .hero-card-hint {
@@ -156,6 +159,7 @@ a:hover { text-decoration: underline; }
 
 .hero-connect-btn {
   width: 100%;
+  flex: 1;
   padding: 28px 24px !important;
   font-size: 1rem !important;
   display: flex;
