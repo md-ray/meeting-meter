@@ -68,7 +68,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if not url or not any(
             h in url.lower()
             for h in ["outlook.office365.com", "outlook.live.com", "calendar.google.com",
-                       "p.]calendar.yahoo.com", ".ics"]
+                       "calendar.yahoo.com", ".ics"]
         ):
             self.send_error(400, "URL must be an ICS calendar link")
             return
