@@ -26,7 +26,7 @@ MeetingMeter is a privacy-first, client-side calendar analytics tool that comput
 
 ```bash
 # Clone
-git clone https://github.com/ArsitekMembumi/meetingmeter.git
+git clone https://github.com/md-ray/meeting-meter.git
 cd meetingmeter
 
 # Option 1: Open directly (ICS upload only)
@@ -102,4 +102,4 @@ MIT
 
 ---
 
-Built by [ArsitekMembumi](https://mrayhan.substack.com)
+Built by [mdray.id](https://mdray.id)

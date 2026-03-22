@@ -13,7 +13,7 @@
         <div><strong>${summary.topMeetingDay}</strong> busiest day</div>
       </div>
       <div class="sc-tagline">Analyzed by MeetingMeter</div>
-      <div class="sc-watermark">meetingmeter.arsitekmembumi.id</div>
+      <div class="sc-watermark">meeting.mdray.id</div>
     `;
   }
 
@@ -64,7 +64,7 @@
 
   function getLinkedInCaption(score, hoursPerWeek) {
     const emoji = score <= 3 ? '\uD83D\uDE0E' : score <= 6 ? '\uD83D\uDE05' : '\uD83E\uDD2F';
-    return `My MeetingLoad Score this month: ${score}/10 ${emoji}. Turns out I spend ${hoursPerWeek} hrs/week in meetings. Check yours \u2192 meetingmeter.arsitekmembumi.id #MeetingMeter #WorkSmarter`;
+    return `My MeetingLoad Score this month: ${score}/10 ${emoji}. Turns out I spend ${hoursPerWeek} hrs/week in meetings. Check yours \u2192 meeting.mdray.id #MeetingMeter #WorkSmarter`;
   }
 
   window.MeetingMeterShare = { buildScoreCard, downloadCard, copyCard, getLinkedInCaption };
