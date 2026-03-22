@@ -277,7 +277,10 @@
     function clearData() {
       if (confirm('Clear all calendar data from this browser?')) {
         localStorage.removeItem('mm_events');
+        localStorage.removeItem('mm_token');
         localStorage.removeItem('mm_excluded_contacts');
+        localStorage.removeItem('mm_work_hours');
+        localStorage.removeItem('mm_period');
         window.location.href = 'index.html';
       }
     }

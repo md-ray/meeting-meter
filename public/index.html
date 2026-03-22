@@ -334,9 +334,26 @@
     // Check if already logged in on page load
     (function () {
       if (window.MeetingMeterAuth.isLoggedIn()) {
+        const hasEvents = !!localStorage.getItem('mm_events');
         const btn = document.getElementById('btn-connect');
-        btn.textContent = '✓ Connected — View Dashboard';
-        btn.onclick = () => { window.location.href = 'dashboard.html'; };
+        if (hasEvents) {
+          btn.textContent = '✓ Connected — View Dashboard';
+          btn.onclick = () => { window.location.href = 'dashboard.html'; };
+        } else {
+          btn.textContent = '✓ Connected — Refresh Calendar';
+          btn.onclick = async () => {
+            btn.disabled = true;
+            btn.textContent = '⏳ Fetching calendar…';
+            try {
+              const events = await window.MeetingMeterGraph.fetchCalendarEvents();
+              localStorage.setItem('mm_events', JSON.stringify(events));
+              window.location.href = 'dashboard.html';
+            } catch (e) {
+              btn.textContent = '✗ Fetch failed — try again';
+              btn.disabled = false;
+            }
+          };
+        }
       }
     })();
   </script>
