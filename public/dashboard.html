@@ -331,16 +331,25 @@
       }
 
       const maxCount = filtered[0].meetingCount;
-      tbody.innerHTML = filtered.map((c, i) => `
+      tbody.innerHTML = filtered.map((c, i) => {
+        const btn = document.createElement('button');
+        return `
         <tr>
           <td>${i + 1}</td>
           <td>${escapeHtml(c.name)}</td>
           <td>${c.meetingCount}</td>
           <td>${c.totalHours}h</td>
           <td style="min-width:100px"><div class="contact-bar" style="width: ${(c.meetingCount / maxCount * 100)}%"></div></td>
-          <td><button class="btn-exclude" onclick="excludeContact('${c.email.replace(/'/g, "\\'")}', '${(c.name || '').replace(/'/g, "\\'")}')" title="Exclude ${escapeHtml(c.name)}">✕</button></td>
-        </tr>
-      `).join('');
+          <td><button class="btn-exclude" data-email="${escapeAttr(c.email)}" data-name="${escapeAttr(c.name)}" title="Exclude ${escapeHtml(c.name)}">✕</button></td>
+        </tr>`;
+      }).join('');
+
+      // Event delegation for exclude buttons (safe — no inline JS)
+      tbody.querySelectorAll('.btn-exclude').forEach(btn => {
+        btn.addEventListener('click', () => {
+          excludeContact(btn.dataset.email, btn.dataset.name);
+        });
+      });
     }
 
     const CHART_IDS = ['chart-meetings-day', 'chart-online-offline', 'chart-duration', 'chart-dow', 'chart-weekly-trend', 'chart-size'];
@@ -462,6 +471,10 @@
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
   </script>
 </body>
