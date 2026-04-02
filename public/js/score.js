@@ -23,7 +23,7 @@
       byDate[day].push(e);
     });
 
-    // Count only weekdays in the 30-day range
+    // Count only weekdays in the period
     let weekdayCount = 0;
     for (let d = new Date(thirtyDaysAgo); d <= now; d.setDate(d.getDate() + 1)) {
       const dow = d.getDay();
@@ -35,10 +35,10 @@
     const avgMeetings = recent.length / weekdayCount;
     const meetingsNorm = Math.min(10, (avgMeetings / 8) * 10);
 
-    // Avg hours per day
+    // Avg hours per day (threshold: 4h = max score)
     const totalMin = recent.reduce((s, e) => s + (e.duration_min || 0), 0);
     const avgHours = (totalMin / 60) / weekdayCount;
-    const hoursNorm = Math.min(10, (avgHours / 6) * 10);
+    const hoursNorm = Math.min(10, (avgHours / 4) * 10);
 
     // Back-to-back ratio
     let btbCount = 0;
@@ -61,9 +61,12 @@
       durNorm = Math.min(10, ((avgDuration - 60) / 60) * 10);
     }
 
-    // Weighted score
-    const raw = hoursNorm * 0.35 + meetingsNorm * 0.25 + btbNorm * 0.25 + durNorm * 0.15;
-    const score = Math.max(1, Math.min(10, Math.round(raw)));
+    // Weighted score (hours = 45%, meetings = 20%, btb = 20%, duration = 15%)
+    let raw = hoursNorm * 0.45 + meetingsNorm * 0.20 + btbNorm * 0.20 + durNorm * 0.15;
+
+    // Floor rule: 6+ hours/day of meetings = minimum score 8
+    let score = Math.max(1, Math.min(10, Math.round(raw)));
+    if (avgHours >= 6) score = Math.max(score, 8);
 
     let label, color;
     if (score <= 3) { label = 'Light'; color = '#22c55e'; }
